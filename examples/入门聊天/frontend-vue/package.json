@@ -1,0 +1,19 @@
+{
+  "name": "sparktide-tutorial-vue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "check": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "@sparktide/frontend-sdk": "file:vendor/sparktide-frontend-sdk-0.1.0.tgz",
+    "vue": "3.5.13"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "5.4.21"
+  }
+}

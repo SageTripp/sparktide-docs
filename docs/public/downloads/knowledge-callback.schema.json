@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SparkTide Knowledge Callback 1.0",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/KnowledgeCallbackRequest"
+    },
+    {
+      "$ref": "#/$defs/KnowledgeCallbackResult"
+    },
+    {
+      "$ref": "#/$defs/KnowledgeCallbackError"
+    }
+  ],
+  "$defs": {
+    "KnowledgeFilter": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$"
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "TENANT",
+              "SUBJECT"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "appId",
+        "subjectId",
+        "tenantId",
+        "required"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "DOCUMENT",
+            "URL",
+            "INLINE"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^https?://"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "URL"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "uri"
+            ]
+          }
+        }
+      ]
+    },
+    "KnowledgeItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_.:-]{1,128}$"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_.:-]{1,128}$"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        },
+        "title": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "source": {
+          "$ref": "#/$defs/KnowledgeSource"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "最多 4096 UTF-8 字节、嵌套深度 8；有限 JSON 值。"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "id",
+        "content",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeCallbackRequest": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "appId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "knowledgeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        },
+        "topK": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "filters": {
+          "$ref": "#/$defs/KnowledgeFilter"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "executionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "deadline": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "trustedContext": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "appId",
+        "subjectId",
+        "tenantId",
+        "knowledgeId",
+        "version",
+        "query",
+        "topK",
+        "filters",
+        "runId",
+        "traceId",
+        "executionId",
+        "deadline",
+        "trustedContext"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeCallbackResult": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KnowledgeItem"
+          },
+          "maxItems": 100
+        },
+        "appliedFilters": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "TENANT",
+              "SUBJECT"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "items",
+        "appliedFilters"
+      ],
+      "additionalProperties": false,
+      "description": "完整结果上限 1 MiB；id 不重复。空结果正常无匹配；必须确认定义要求的全部过滤。"
+    },
+    "KnowledgeCallbackError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "KNOWLEDGE_ACCESS_DENIED",
+                "KNOWLEDGE_TIMED_OUT",
+                "KNOWLEDGE_UNAVAILABLE",
+                "KNOWLEDGE_RATE_LIMITED",
+                "KNOWLEDGE_REQUEST_REJECTED",
+                "KNOWLEDGE_PROTOCOL_ERROR"
+              ]
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

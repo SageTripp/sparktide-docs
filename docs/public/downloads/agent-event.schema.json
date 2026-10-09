@@ -1,0 +1,1541 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SparkTide AgentEvent 1.0",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": "1.0"
+    },
+    "event": {
+      "enum": [
+        "message.started",
+        "status.changed",
+        "text.delta",
+        "agent.started",
+        "agent.completed",
+        "tool.started",
+        "tool.completed",
+        "knowledge.retrieved",
+        "citation.created",
+        "ui.created",
+        "confirmation.required",
+        "usage.updated",
+        "error",
+        "message.completed",
+        "model.started",
+        "model.completed",
+        "knowledge.planned",
+        "knowledge.fused",
+        "citation.verified"
+      ]
+    },
+    "runId": {
+      "type": "string"
+    },
+    "traceId": {
+      "type": "string"
+    },
+    "conversationId": {
+      "type": "string"
+    },
+    "messageId": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "event",
+    "runId",
+    "traceId",
+    "conversationId",
+    "messageId",
+    "sequence",
+    "data"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "message.started"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "status.changed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "text.delta"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "agent.started"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "agent.completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              },
+              "result": {
+                "$ref": "#/$defs/AgentResult"
+              },
+              "usage": {
+                "$ref": "#/$defs/AgentBudgetUsage"
+              },
+              "errorCode": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "status"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "tool.started"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "callId": {
+                "type": "string"
+              },
+              "toolId": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "effect": {
+                "enum": [
+                  "READ",
+                  "COMPUTE",
+                  "WRITE",
+                  "DANGEROUS"
+                ]
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "callId",
+              "toolId",
+              "version",
+              "effect"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "tool.completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "callId": {
+                "type": "string"
+              },
+              "toolId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "callId",
+              "toolId",
+              "status"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "knowledge.retrieved"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "knowledgeId": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              },
+              "knowledgeVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "status": {
+                "enum": [
+                  "SUCCEEDED",
+                  "EMPTY",
+                  "FAILED"
+                ]
+              },
+              "errorCode": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "selectionReason": {
+                "enum": [
+                  "MODEL_REQUEST",
+                  "EAGER",
+                  "RULE_ALWAYS",
+                  "TRUSTED_CONTEXT",
+                  "QUERY_MATCH",
+                  "TAG_MATCH",
+                  "DESCRIPTION_TAG_MATCH"
+                ]
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "knowledgeId",
+              "count"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "citation.created"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "documentId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "knowledgeId": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              },
+              "sourceRef": {
+                "$ref": "#/$defs/KnowledgeSource"
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "最多 4096 UTF-8 字节、嵌套深度 8；有限 JSON 值。"
+              },
+              "itemId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "knowledgeVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "fusionScore": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "chunkId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "id",
+              "documentId",
+              "title",
+              "source",
+              "knowledgeId"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "ui.created"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "component": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "props": {
+                "type": "object"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "component",
+              "version",
+              "props"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "confirmation.required"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "confirmationId": {
+                "type": "string"
+              },
+              "toolId": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "object"
+              },
+              "argumentsHash": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "confirmationId",
+              "toolId",
+              "version",
+              "arguments",
+              "argumentsHash",
+              "expiresAt"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "usage.updated"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "budgetUnits": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "steps": {
+                "type": "integer"
+              },
+              "toolCalls": {
+                "type": "integer"
+              },
+              "providerUsage": {
+                "type": "object"
+              },
+              "cost": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "source": {
+                    "const": "configured-pricing"
+                  },
+                  "amounts": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "source",
+                  "amounts"
+                ]
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              },
+              "agentCalls": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 64
+              },
+              "scopeUsage": {
+                "$ref": "#/$defs/AgentBudgetUsage"
+              },
+              "modelInvocationIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "maxItems": 256
+              },
+              "citationIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "maxItems": 256
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "budgetUnits",
+              "steps",
+              "toolCalls",
+              "providerUsage",
+              "cost"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "error"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "message.completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "model.started"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "invocationId": {
+                "type": "string"
+              },
+              "stepId": {
+                "type": "string"
+              },
+              "attempt": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              },
+              "binding": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "additionalProperties": false
+              },
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+                  },
+                  "scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "scope"
+                ],
+                "additionalProperties": false
+              },
+              "selectionReason": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "invocationId",
+              "stepId",
+              "attempt",
+              "binding",
+              "model",
+              "selectionReason"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "model.completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "invocationId": {
+                "type": "string"
+              },
+              "stepId": {
+                "type": "string"
+              },
+              "attempt": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              },
+              "binding": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "additionalProperties": false
+              },
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+                  },
+                  "scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "scope"
+                ],
+                "additionalProperties": false
+              },
+              "selectionReason": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "RESPONDED",
+                  "FAILED",
+                  "SKIPPED"
+                ]
+              },
+              "errorCode": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "outputStarted": {
+                "type": "boolean"
+              },
+              "usage": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "cost": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "invocationId",
+              "stepId",
+              "attempt",
+              "binding",
+              "model",
+              "selectionReason",
+              "status",
+              "errorCode",
+              "outputStarted",
+              "usage",
+              "cost"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "knowledge.planned"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "mode": {
+                "enum": [
+                  "EAGER",
+                  "AUTO",
+                  "ON_DEMAND"
+                ]
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/KnowledgeSelectedSource"
+                },
+                "maxItems": 16
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "agentVersion",
+              "retrievalId",
+              "mode",
+              "sources"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "knowledge.fused"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agentId": {
+                "type": "string"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50
+              },
+              "rerank": {
+                "enum": [
+                  "NONE",
+                  "LEXICAL"
+                ]
+              },
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "retrievals": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 64
+                  },
+                  "contextChars": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65536
+                  }
+                },
+                "required": [
+                  "retrievals",
+                  "contextChars"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "agentVersion",
+              "retrievalId",
+              "count",
+              "rerank",
+              "usage"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "citation.verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "agentId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "agentVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "references": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "$ref": "#/$defs/CitationVerification"
+                }
+              }
+            },
+            "required": [
+              "agentCallId",
+              "agentId",
+              "agentVersion",
+              "parentAgentCallId",
+              "depth",
+              "references"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "AgentBudgetUsage": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "agentCalls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "budgetUnits": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "modelInvocationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "maxItems": 256
+        },
+        "citationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "maxItems": 256
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "steps",
+        "toolCalls",
+        "agentCalls",
+        "budgetUnits",
+        "modelInvocationIds",
+        "citationIds"
+      ]
+    },
+    "AgentResult": {
+      "type": "object",
+      "properties": {
+        "agentCallId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parentAgentCallId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "agentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "agentVersion": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "status": {
+          "const": "SUCCEEDED"
+        },
+        "text": {
+          "type": "string"
+        },
+        "output": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "TEXT"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "JSON"
+                },
+                "value": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "usage": {
+          "$ref": "#/$defs/AgentBudgetUsage"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agentCallId",
+        "parentAgentCallId",
+        "depth",
+        "agentId",
+        "agentVersion",
+        "status",
+        "text",
+        "output",
+        "usage"
+      ]
+    },
+    "KnowledgeSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "DOCUMENT",
+            "URL",
+            "INLINE"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^https?://"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "URL"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "uri"
+            ]
+          }
+        }
+      ]
+    },
+    "KnowledgeSelectedSource": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "reason": {
+          "enum": [
+            "MODEL_REQUEST",
+            "EAGER",
+            "RULE_ALWAYS",
+            "TRUSTED_CONTEXT",
+            "QUERY_MATCH",
+            "TAG_MATCH",
+            "DESCRIPTION_TAG_MATCH"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "CitationVerification": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "VERIFIED",
+            "UNVERIFIED"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status"
+      ],
+      "additionalProperties": false,
+      "description": "仅核验当前检索来源编号，不证明回答事实正确；空编号为 UNVERIFIED。"
+    }
+  }
+}

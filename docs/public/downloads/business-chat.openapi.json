@@ -1,0 +1,768 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SparkTide 业务后台聊天接口",
+    "version": "business-chat/v1",
+    "description": "部署在业务后台；认证由 ChatCredentialResolver 适配并由底座独立验证。没有管理入口。状态和事件仍属于底座。"
+  },
+  "servers": [
+    {
+      "url": "/api/ai",
+      "description": "默认前缀，可显式配置"
+    }
+  ],
+  "security": [
+    {
+      "businessBearer": []
+    },
+    {
+      "businessCookie": []
+    }
+  ],
+  "paths": {
+    "/chat": {
+      "post": {
+        "operationId": "post_chat",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "SDK 生成；提交不明时不得重发不同幂等键"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "post": {
+        "operationId": "post_conversations",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationCreate"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "get_conversations",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/ConversationPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}": {
+      "get": {
+        "operationId": "get_conversations__id_",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch_conversations__id_",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationRenamed"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationRename"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete_conversations__id_",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDeleted"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}": {
+      "get": {
+        "operationId": "get_runs__id_",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/cancel": {
+      "post": {
+        "operationId": "post_runs__id__cancel",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/confirm": {
+      "post": {
+        "operationId": "post_runs__id__confirm",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmationDecision"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/events": {
+      "get": {
+        "operationId": "get_runs__id__events",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}:[0-9]{1,15}$"
+            },
+            "description": "runId:sequence，默认为0；授权失败/游标过期不自动重试"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "AgentEvent 1.0 SSE，保留底座事件 ID、序号和终态"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/citations/{citation}/preview": {
+      "get": {
+        "operationId": "citationPreview",
+        "summary": "按当前业务权限读取引用原文",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "citation",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "引用不存在"
+          },
+          "403": {
+            "description": "当前权限已拒绝"
+          },
+          "409": {
+            "description": "权限纪元已变化"
+          },
+          "200": {
+            "description": "引用原文与授权元数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/CitationPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "businessBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "businessCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "business-session",
+        "description": "名称由业务认证配置；必须使用业务CSRF保护，SDK可传CSRF头"
+      }
+    },
+    "schemas": {
+      "ConversationCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 128,
+            "default": ""
+          }
+        }
+      },
+      "ConversationRename": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "ConfirmationDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "confirmationId",
+          "decision"
+        ],
+        "properties": {
+          "confirmationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Conversation": {
+        "required": [
+          "id",
+          "title",
+          "messages"
+        ],
+        "properties": {
+          "messages": {
+            "items": {
+              "required": [
+                "role",
+                "content"
+              ],
+              "properties": {
+                "errorCode": {
+                  "type": "string"
+                },
+                "runId": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "role": {
+                  "enum": [
+                    "user",
+                    "assistant"
+                  ]
+                },
+                "messageId": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "maxItems": 20,
+            "type": "array"
+          },
+          "updatedAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 128
+          }
+        },
+        "type": "object"
+      },
+      "ConversationRenamed": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ConversationDeleted": {
+        "required": [
+          "id",
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "const": true
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ConfirmationResponse": {
+        "required": [
+          "confirmationId",
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          },
+          "confirmationId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChatRequest": {
+        "type": "object",
+        "properties": {
+          "protocolVersion": {
+            "const": "1.0"
+          },
+          "appId": {
+            "type": "string",
+            "description": "兼容字段；可省略，不能与部署绑定应用不一致。"
+          },
+          "agentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "agentVersion": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "const": "user"
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "role",
+              "content"
+            ],
+            "additionalProperties": false
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "client": {
+            "type": "object",
+            "properties": {
+              "platform": {
+                "type": "string"
+              },
+              "uiCapabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

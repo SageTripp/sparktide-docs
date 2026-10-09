@@ -1,0 +1,23 @@
+server:
+  address: 127.0.0.1
+  port: 8091
+tutorial:
+  model-endpoint: ${TUTORIAL_MODEL_ENDPOINT}
+  model-id: ${TUTORIAL_MODEL_ID}
+sparktide:
+  enabled: true
+  platform-url: ${SPARKTIDE_PLATFORM_URL}
+  app-id: tutorial
+  token: ${SPARKTIDE_TOKEN}
+  default-agent:
+    id: main
+    version: 1.0.0
+  deployment:
+    mode: DEVELOPMENT
+    source: tutorial-service
+    auto-sync: true
+  chat:
+    enabled: true
+    platform-url: ${SPARKTIDE_PLATFORM_URL}
+    app-id: tutorial
+    path: /api/ai

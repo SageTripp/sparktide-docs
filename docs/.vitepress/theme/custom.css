@@ -1,0 +1,57 @@
+:root {
+  --vp-c-brand-1:#146ad7; --vp-c-brand-2:#1688de; --vp-c-brand-3:#238fec;
+  --vp-c-brand-soft:rgba(20,106,215,.10);
+  --vp-home-hero-name-color:transparent;
+  --vp-home-hero-name-background:linear-gradient(115deg,#09285c,#137bec 60%,#07bccd);
+  --vp-home-hero-image-background-image:linear-gradient(135deg,#2682ef44,#05c9dd22);
+  --vp-home-hero-image-filter:blur(54px);
+  --vp-font-family-base:'Inter','Segoe UI','Microsoft YaHei',sans-serif;
+}
+.dark {--vp-c-brand-1:#78baff;--vp-c-brand-2:#4a9aeb;--vp-c-brand-soft:#238fec20;--vp-home-hero-name-background:linear-gradient(110deg,#acd3ff,#65b6ff 60%,#55e3e0);}
+.VPHomeHero .image-src {border-radius:28px;background:#fff;box-shadow:0 18px 60px #0e4d9620;max-width:300px;max-height:300px;}
+.VPNavBarTitle .logo {width:34px;height:34px;object-fit:contain;border-radius:7px;background:white;}
+.VPFeature {border:1px solid var(--vp-c-divider);background:var(--vp-c-bg-soft);transition:border-color .2s,transform .2s;}
+.VPFeature:hover {border-color:var(--vp-c-brand-1);transform:translateY(-2px);}
+.home-guide {max-width:1152px;margin:64px auto 80px;padding:0 24px;}
+.home-guide h2 {font-size:26px;line-height:1.5;margin:40px 0 20px;letter-spacing:-.02em;}
+.home-guide p {line-height:1.9;color:var(--vp-c-text-2);margin:20px 0;}
+.home-guide a {color:var(--vp-c-brand-1);text-decoration:none;}
+.home-guide img {width:100%;border-radius:20px;margin:12px 0;}
+.home-guide table {width:100%;border-collapse:collapse;line-height:1.8;text-align:left;}
+.home-guide th,.home-guide td {padding:18px 20px;border-bottom:1px solid var(--vp-c-divider);}
+.home-guide th {background:var(--vp-c-bg-soft);font-weight:600;}
+.vp-doc table {display:block;overflow-x:auto;width:100%;}
+.vp-doc th {white-space:nowrap;}
+.vp-doc img {border-radius:16px;border:1px solid var(--vp-c-divider);}
+.vp-doc h2 {margin-top:42px;}
+.doc-meta {margin:28px 0 0;padding-top:16px;border-top:1px solid var(--vp-c-divider);font-size:12px;line-height:1.8;color:var(--vp-c-text-3);}
+@media(max-width:640px){.home-guide{margin-top:40px;padding:0 24px}.home-guide table{display:block;overflow-x:auto}.home-guide td{min-width:180px}.VPHomeHero .image-src{max-width:230px;max-height:230px}}
+@media(prefers-reduced-motion:reduce){.VPFeature{transition:none}.VPFeature:hover{transform:none}}
+
+/* 控制台入口沿用文档站主题令牌，截图链接在仓库子路径部署下同样可用。 */
+.console-showcase{padding:24px;border:1px solid var(--vp-c-divider);border-radius:20px;background:var(--vp-c-bg-soft)}
+.console-showcase img{display:block;border:1px solid var(--vp-c-divider);border-radius:12px;box-shadow:0 8px 30px #0e4d9610}
+.module-map{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:18px}
+.module-map span{padding:10px 6px;text-align:center;font-size:12px;color:var(--vp-c-brand-1);background:var(--vp-c-brand-soft);border-radius:8px}
+@media(max-width:760px){.module-map{grid-template-columns:repeat(3,minmax(0,1fr))}.console-showcase{padding:16px}}
+
+
+/* 原生代码标签使用方向键切换时保留清晰的焦点提示。 */
+.vp-code-group .tabs input:focus-visible + label {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: -4px;
+  border-radius: 4px;
+}
+.tutorial-progress,.reading-context{margin:0 0 28px;padding:18px 20px;border:1px solid var(--vp-c-divider);border-radius:12px;background:var(--vp-c-bg-soft);font-size:13px;line-height:1.7}
+.tutorial-progress p{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;margin:0 0 14px}
+.tutorial-progress ol{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0;padding:0}
+.tutorial-progress li{flex:1 1 100px}
+.tutorial-progress a,.reading-context a{color:var(--vp-c-brand-1)}
+.tutorial-progress li a{display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;font-size:11px;line-height:1.5}
+.tutorial-progress a[aria-current=step]{background:var(--vp-c-brand-soft);font-weight:600;outline:1px solid var(--vp-c-brand-1)}
+.tutorial-progress li span{flex-shrink:0;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--vp-c-bg);border:1px solid var(--vp-c-divider)}
+.reading-context p{margin:6px 0;color:var(--vp-c-text-2)}
+.reading-context a{display:inline-block;margin-right:18px}
+.learning-path{padding:20px 24px;border:1px solid var(--vp-c-divider);border-radius:12px;background:var(--vp-c-bg-soft);font-size:15px;line-height:2.2}
+.tutorial-progress a:focus-visible,.reading-context a:focus-visible{outline:2px solid var(--vp-c-brand-1);outline-offset:3px}
+@media(max-width:640px){.tutorial-progress{padding:14px}.tutorial-progress li{flex-basis:110px}}

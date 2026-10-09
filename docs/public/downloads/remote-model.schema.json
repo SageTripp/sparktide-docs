@@ -1,0 +1,572 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sparktide:remote-model:1.0",
+  "title": "SparkTide REMOTE 模型回调 1.0",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/RemoteModelRequest"
+    },
+    {
+      "$ref": "#/$defs/RemoteModelResponse"
+    },
+    {
+      "$ref": "#/$defs/RemoteModelStreamFrame"
+    },
+    {
+      "$ref": "#/$defs/RemoteModelFailure"
+    }
+  ],
+  "$defs": {
+    "RemoteModelUsage": {
+      "type": "object",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "completion_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "total_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "RemoteModelToolCall": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "type": {
+          "const": "function"
+        },
+        "function": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "\\S"
+            },
+            "arguments": {
+              "type": "string",
+              "description": "完整闭合 JSON 对象，拒绝重复属性、尾随 JSON 与 null"
+            }
+          },
+          "required": [
+            "name",
+            "arguments"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "function"
+      ],
+      "additionalProperties": false
+    },
+    "RemoteModelMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "enum": [
+            "system",
+            "user",
+            "assistant",
+            "tool"
+          ]
+        },
+        "content": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_calls": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/RemoteModelToolCall"
+          }
+        },
+        "tool_call_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "tool"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "tool_call_id"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "tool_call_id"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "assistant"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "tool_calls"
+                ],
+                "properties": {
+                  "tool_calls": {
+                    "minItems": 1
+                  }
+                }
+              }
+            ]
+          },
+          "else": {
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "string"
+              }
+            },
+            "not": {
+              "required": [
+                "tool_calls"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "RemoteModelRequest": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "invocationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "\\S"
+        },
+        "deadline": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807,
+          "description": "绝对 UTC 毫秒；回调最多等待 60 秒"
+        },
+        "purpose": {
+          "enum": [
+            "BUSINESS",
+            "SYNTHETIC_PROBE"
+          ]
+        },
+        "appId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$"
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "\\S"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "\\S"
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "\\S"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/RemoteModelMessage"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object"
+          }
+        },
+        "max_completion_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000000
+        },
+        "stream": {
+          "type": "boolean"
+        },
+        "response_format": {
+          "type": "object"
+        },
+        "tool_choice": {
+          "description": "合成探测或受控模型请求中的工具选择"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "top_p": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "invocationId",
+        "deadline",
+        "purpose",
+        "appId",
+        "model",
+        "messages",
+        "max_completion_tokens",
+        "stream"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "purpose": {
+                "const": "BUSINESS"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "subjectId",
+              "tenantId",
+              "runId",
+              "traceId"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "subjectId"
+                  ]
+                },
+                {
+                  "required": [
+                    "tenantId"
+                  ]
+                },
+                {
+                  "required": [
+                    "runId"
+                  ]
+                },
+                {
+                  "required": [
+                    "traceId"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "description": "REMOTE 1.0 回调；平台出站认证，SDK 独立凭据与消费应用白名单验证。JSON 正文最大 1 MiB；身份来自平台授权。"
+    },
+    "RemoteModelResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/RemoteModelMessage"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "assistant"
+                }
+              }
+            }
+          ]
+        },
+        "usage": {
+          "$ref": "#/$defs/RemoteModelUsage"
+        }
+      },
+      "required": [
+        "message",
+        "usage"
+      ],
+      "additionalProperties": false
+    },
+    "RemoteModelTextDelta": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "type": {
+          "const": "text.delta"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "RemoteModelToolDelta": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "type": {
+          "const": "tool.delta"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "arguments": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "type",
+        "index"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "id"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "arguments"
+          ]
+        }
+      ]
+    },
+    "RemoteModelUsageDelta": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "type": {
+          "const": "usage"
+        },
+        "usage": {
+          "$ref": "#/$defs/RemoteModelUsage"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "type",
+        "usage"
+      ],
+      "additionalProperties": false
+    },
+    "RemoteModelCompleted": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "type": {
+          "const": "model.completed"
+        },
+        "finishReason": {
+          "enum": [
+            "STOP",
+            "TOOL_CALLS",
+            "LENGTH"
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "type",
+        "finishReason"
+      ],
+      "additionalProperties": false
+    },
+    "RemoteModelError": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0"
+        },
+        "type": {
+          "const": "model.error"
+        },
+        "code": {
+          "enum": [
+            "MODEL_UNAVAILABLE",
+            "MODEL_TIMED_OUT",
+            "MODEL_RATE_LIMITED",
+            "MODEL_AUTH_FAILED",
+            "MODEL_REQUEST_REJECTED",
+            "MODEL_FEATURE_UNSUPPORTED",
+            "MODEL_PROTOCOL_ERROR"
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "type",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "RemoteModelStreamFrame": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/RemoteModelTextDelta"
+        },
+        {
+          "$ref": "#/$defs/RemoteModelToolDelta"
+        },
+        {
+          "$ref": "#/$defs/RemoteModelUsageDelta"
+        },
+        {
+          "$ref": "#/$defs/RemoteModelCompleted"
+        },
+        {
+          "$ref": "#/$defs/RemoteModelError"
+        }
+      ],
+      "description": "每个 JSON 对象为一条 data: SSE 帧；必须明确终结，拒绝 [DONE]、未知帧/字段、重复终结和截断。最大 4 MiB；工具参数拼接后必须是闭合 JSON 对象。"
+    },
+    "RemoteModelFailure": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "MODEL_UNAVAILABLE",
+                "MODEL_TIMED_OUT",
+                "MODEL_RATE_LIMITED",
+                "MODEL_AUTH_FAILED",
+                "MODEL_REQUEST_REJECTED",
+                "MODEL_FEATURE_UNSUPPORTED",
+                "MODEL_PROTOCOL_ERROR"
+              ]
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "REMOTE 非 2xx 的受控错误合同；平台优先读取代码，错误正文不进入用户事件。协议/认证错误不因 HTTP 5xx 变成可重试故障。"
+    }
+  }
+}

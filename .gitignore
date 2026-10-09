@@ -1,0 +1,14 @@
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+.DS_Store
+**/.gradle/
+**/.kotlin/
+**/build/
+**/dist/
+**/.local/
+**/vendor/*.tgz
+*.log
+.env
+.env.*
+!.env.example
