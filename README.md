@@ -47,16 +47,18 @@ npm run docs:check
 
 ## GitHub Pages 发布
 
-本目录应作为文档仓库的根目录（package.json 与 .github 同级）。若放在大仓库子目录，需调整工作流工作目录、缓存依赖路径和上传目录。已有工作流面向 main 分支，Pages → Source 选择 GitHub Actions。实际 base 从 configure-pages 元数据读取，支持仓库子路径或自定义域名。
+本目录应作为文档仓库的根目录（package.json 与 .github 同级）。若放在大仓库子目录，需调整工作流工作目录、缓存依赖路径和上传目录。Pages → Source 选择 GitHub Actions；完成 Pages 配置后，手动在 master 分支触发部署工作流。工作流仅接受 master，普通推送不会发布站点。实际 base 从 configure-pages 元数据读取，支持仓库子路径或自定义域名。
 
-本目录作为独立文档仓库维护。2026-10-09 用户授权将文档及三个代码仓库上传至 SageTripp 个人账号，均设为私有；上传源码与部署 Pages 分开处理。现有 Pages 工作流仍面向 main 分支，首次上传文档工作分支不触发部署。部署过程参考 [VitePress 官方部署说明](https://vitepress.dev/guide/deploy#github-pages)。
+本目录作为独立文档仓库维护。2026-10-09 用户授权将文档及三个代码仓库上传至 SageTripp 个人账号，均设为私有；上传源码与部署 Pages 分开处理。部署工作流已对齐 master 分支，本次分支初始化不触发部署。部署过程参考 [VitePress 官方部署说明](https://vitepress.dev/guide/deploy#github-pages)。
 
 四个私有仓库已创建并核对远端提交：
 
-- [sparktide-platform](https://github.com/SageTripp/sparktide-platform)：feature/platform-foundation。
-- [sparktide-backend-sdk](https://github.com/SageTripp/sparktide-backend-sdk)：feature/backend-sdk。
-- [sparktide-frontend-sdk](https://github.com/SageTripp/sparktide-frontend-sdk)：feature/frontend-sdk。
-- [sparktide-docs](https://github.com/SageTripp/sparktide-docs)：codex/docs。
+- [sparktide-platform](https://github.com/SageTripp/sparktide-platform)：工作分支 feature/platform-foundation。
+- [sparktide-backend-sdk](https://github.com/SageTripp/sparktide-backend-sdk)：工作分支 feature/backend-sdk。
+- [sparktide-frontend-sdk](https://github.com/SageTripp/sparktide-frontend-sdk)：工作分支 feature/frontend-sdk。
+- [sparktide-docs](https://github.com/SageTripp/sparktide-docs)：工作分支 codex/docs。
+
+四个仓库统一采用 master（主分支及 GitHub 默认分支）、dev（开发集成分支）、release/0.1、release/0.2 和上述工作分支。首次建立这些分支时引用已验证的上传版本；这不是正式产品发行。release/0.1 用于 0.1 版本发布准备，release/0.2 作为下一版本预备分支，尚无 0.2 制品或发行标签。后续工作分支经审查后合入 dev，准备发布时从 dev 更新对应 release 分支，完成验证后由维护者合入 master 并创建发行标签；发布修复同步回 dev。不直接在 master / dev 上开发，不自动清理仍在使用的工作分支，没有额外创建 main。
 
 仓库统一使用 sparktide 主题，保留各自独立 Git 历史。首次代码上传仅包含各仓库已有提交，平台及 SDK 的未提交改动仍留在本地；没有将它们打成临时存档提交。文档仓库包含本轮重构和示例，未启用 Pages 或公开制品发布。
 
