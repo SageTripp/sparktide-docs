@@ -47,6 +47,10 @@ npm run docs:check
 
 ## GitHub Pages 发布
 
+正式文档域名为 `sparktide.stdev.fun`。DNS 使用 CNAME：主机记录 `sparktide`，记录值 `sagetripp.github.io`，TTL 600；记录值不包含协议或仓库路径。GitHub Pages 的 Custom domain 设置为同一域名，HTTPS 证书由 GitHub 签发。
+
+当前使用 Actions 发布，域名以 GitHub Pages 设置为准，不依赖 CNAME 文件。`configure-pages` 返回自定义域名的根路径，现有 `DOCS_BASE` 自动适配；设置域名后重新部署，检查首页、教程、静态资源与 Maven 校验值。原 GitHub Pages 地址及已发布的 Maven URL保留为跳转入口。需要回退时清除 Pages 自定义域名并重新部署，恢复仓库子路径；不改动已发布版本与附件。
+
 本目录应作为文档仓库的根目录（package.json 与 .github 同级）。若放在大仓库子目录，需调整工作流工作目录、缓存依赖路径和上传目录。Pages → Source 选择 GitHub Actions；完成 Pages 配置后，手动在 master 分支触发部署工作流。工作流仅接受 master，普通推送不会发布站点。实际 base 从 configure-pages 元数据读取，支持仓库子路径或自定义域名。
 
 本目录作为独立文档仓库维护。2026-10-09 用户授权将文档及三个代码仓库上传至 SageTripp 个人账号，三个代码仓库保持私有；文档仓库和二进制制品按后续授权公开。部署工作流已对齐 master 分支，本次分支初始化不触发部署。部署过程参考 [VitePress 官方部署说明](https://vitepress.dev/guide/deploy#github-pages)。
