@@ -1,0 +1,37 @@
+name: 从已公开镜像发布底座 Jar
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 已验证的发行版本
+        required: true
+        default: '0.1.0'
+      digest:
+        description: 已验证的镜像 SHA256 digest
+        required: true
+permissions:
+  contents: write
+jobs:
+  attach:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 提取并核对同一份 Jar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          DIGEST: ${{ inputs.digest }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import os,re
+          assert re.fullmatch(r'\d+\.\d+\.\d+',os.environ['VERSION'])
+          assert re.fullmatch(r'sha256:[0-9a-f]{64}',os.environ['DIGEST'])
+          PY
+          gh release download "v$VERSION" --repo "$REPOSITORY" --pattern SHA256SUMS-platform
+          docker pull "ghcr.io/sagetripp/sparktide-platform@$DIGEST"
+          docker create --name sparktide-release-extract "ghcr.io/sagetripp/sparktide-platform@$DIGEST"
+          docker cp sparktide-release-extract:/app/platform.jar "sparktide-platform-$VERSION.jar"
+          docker rm sparktide-release-extract
+          sha256sum -c SHA256SUMS-platform
+          gh release upload "v$VERSION" "sparktide-platform-$VERSION.jar" --repo "$REPOSITORY"

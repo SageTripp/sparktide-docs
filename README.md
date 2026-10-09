@@ -78,7 +78,7 @@ npm run docs:build
 npm run docs:check
 ```
 
-5. 审查、提交文档与公共 Maven 目录，在本文档仓库创建固定版本 Release 并上传公开附件及 SHA256SUMS；发行说明记录实际构建编号、提交和镜像 digest。
+5. 审查、提交文档与公共 Maven 目录，在本文档仓库创建固定版本 Release 并上传公开附件及 SHA256SUMS；发行说明记录实际构建编号、提交和镜像 digest。本地大文件上传受限时，可先建立包含校验清单的草稿 Release，再运行 `release-platform-jar.yml`，传入已验证的版本和公开镜像 digest；它从该镜像提取 Jar，按原始构建 SHA256 校验后上传，不重新构建、不覆盖已有附件。
 6. 维护者将 GHCR package 可见性设为 Public。核对三个代码仓库仍为 private，然后分别验证匿名下载 Maven、前端 tgz、Jar 与镜像。
 7. 合入 master，手动触发 `deploy.yml`。检查公网子路径、SDK 安装、教程消费及 Pages 工作流结果；许可证或厂商实网验收不能从构建成功推断。
 
