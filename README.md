@@ -51,6 +51,15 @@ npm run docs:check
 
 本目录作为独立文档仓库维护。2026-10-09 用户授权将文档及三个代码仓库上传至 SageTripp 个人账号，均设为私有；上传源码与部署 Pages 分开处理。现有 Pages 工作流仍面向 main 分支，首次上传文档工作分支不触发部署。部署过程参考 [VitePress 官方部署说明](https://vitepress.dev/guide/deploy#github-pages)。
 
+四个私有仓库已创建并核对远端提交：
+
+- [sparktide-platform](https://github.com/SageTripp/sparktide-platform)：feature/platform-foundation。
+- [sparktide-backend-sdk](https://github.com/SageTripp/sparktide-backend-sdk)：feature/backend-sdk。
+- [sparktide-frontend-sdk](https://github.com/SageTripp/sparktide-frontend-sdk)：feature/frontend-sdk。
+- [sparktide-docs](https://github.com/SageTripp/sparktide-docs)：codex/docs。
+
+仓库统一使用 sparktide 主题，保留各自独立 Git 历史。首次代码上传仅包含各仓库已有提交，平台及 SDK 的未提交改动仍留在本地；没有将它们打成临时存档提交。文档仓库包含本轮重构和示例，未启用 Pages 或公开制品发布。
+
 ## 维护与发布信息
 
 - 状态：已确认；日期：2026-09-29；责任人：SparkTide 维护者。
