@@ -15,51 +15,57 @@ docGoal: "查 JVM 安装、Spring 配置、声明与标准 HTTP API；动手操�
 
 ## 安装
 
-先在后台 SDK 源码仓库构建制品并安装到 Maven Local：
-
-```powershell
-.\gradlew.bat clean build publishToMavenLocal
-```
-
-当前未公开发布 Maven 制品。下列是同一制品的三种依赖声明方式，选择业务项目使用的构建工具；Gradle Kotlin DSL 是构建脚本语法，也可用于 Java 项目。私有 Maven 仓库由组织自行提供，替换本地仓库配置即可。
+直接使用公开 Maven 仓库 `https://sagetripp.github.io/sparktide-docs/maven/`，无需克隆 SDK 源码或安装到 Maven Local。下面按业务工程的构建工具选择安装方式；Gradle Kotlin DSL 也可用于 Java 项目。
 
 | 使用场景 | 制品 |
 | --- | --- |
-| 纯 Java / JVM 核心 | `dev.sparktide:sdk-java:0.1.0-SNAPSHOT` |
-| Kotlin 语言扩展 | `dev.sparktide:sdk-kotlin:0.1.0-SNAPSHOT`（包含 Java 核心依赖） |
-| Spring 标准 HTTP API / 能力注册 | `dev.sparktide:sdk-spring-boot-starter:0.1.0-SNAPSHOT`；宿主提供 Spring MVC Web 运行时 |
+| 纯 Java / JVM 核心 | `dev.sparktide:sdk-java:0.1.0` |
+| Kotlin 语言扩展 | `dev.sparktide:sdk-kotlin:0.1.0`（包含 Java 核心依赖） |
+| Spring 标准 HTTP API / 能力注册 | `dev.sparktide:sdk-spring-boot-starter:0.1.0`；宿主提供 Spring MVC Web 运行时 |
 
 下面以 Spring 接入为例；纯 JVM 项目改用表中的核心或 Kotlin 制品。Spring Kotlin 项目同时添加 Kotlin 模块。
 
 ::: code-group
 
 ```kotlin [Gradle Kotlin DSL]
-repositories { mavenLocal(); mavenCentral() }
+repositories {
+    mavenCentral()
+    maven { url = uri("https://sagetripp.github.io/sparktide-docs/maven/") }
+}
 dependencies {
-    implementation("dev.sparktide:sdk-spring-boot-starter:0.1.0-SNAPSHOT")
-    // Kotlin 项目另加：implementation("dev.sparktide:sdk-kotlin:0.1.0-SNAPSHOT")
+    implementation("dev.sparktide:sdk-spring-boot-starter:0.1.0")
+    // Kotlin 项目另加：implementation("dev.sparktide:sdk-kotlin:0.1.0")
     // 宿主 Spring Boot BOM 管理 Web 运行时版本
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
 }
 ```
 
 ```groovy [Gradle Groovy DSL]
-repositories { mavenLocal(); mavenCentral() }
+repositories {
+    mavenCentral()
+    maven { url = uri("https://sagetripp.github.io/sparktide-docs/maven/") }
+}
 dependencies {
-    implementation 'dev.sparktide:sdk-spring-boot-starter:0.1.0-SNAPSHOT'
-    // Kotlin 项目另加：implementation 'dev.sparktide:sdk-kotlin:0.1.0-SNAPSHOT'
+    implementation 'dev.sparktide:sdk-spring-boot-starter:0.1.0'
+    // Kotlin 项目另加：implementation 'dev.sparktide:sdk-kotlin:0.1.0'
     // 宿主 Spring Boot BOM 管理 Web 运行时版本
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 }
 ```
 
 ```xml [Maven]
-<!-- 默认读取 Maven Local；宿主 Spring Boot BOM 管理 Web 运行时版本 -->
+<!-- 宿主 Spring Boot BOM 管理 Web 运行时版本 -->
+<repositories>
+  <repository>
+    <id>sparktide-public</id>
+    <url>https://sagetripp.github.io/sparktide-docs/maven/</url>
+  </repository>
+</repositories>
 <dependencies>
   <dependency>
     <groupId>dev.sparktide</groupId>
     <artifactId>sdk-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
   </dependency>
   <!-- Kotlin 项目另加 sdk-kotlin，版本同上 -->
   <dependency>
@@ -78,7 +84,7 @@ dependencies {
 
 ## 接入与认证
 
-引入 `dev.sparktide:sdk-spring-boot-starter:0.1.0-SNAPSHOT`，业务项目提供 Servlet Web 运行时；核心不依赖 Spring。配置：
+引入 `dev.sparktide:sdk-spring-boot-starter:0.1.0`，业务项目提供 Servlet Web 运行时；核心不依赖 Spring。配置：
 
 ```yaml
 sparktide:

@@ -14,34 +14,30 @@ docGoal: "完成基础对话后，按需查阅本专题的配置、SDK 方法与
 
 推荐在生产环境使用 PostgreSQL 持久化数据，将平台放在 HTTPS 网关之后。仓库 Compose 负责启动平台和数据库，不会自动创建模型或业务账号。
 
-## 部署前准备
+## 使用公开镜像
 
-取得平台源码，准备 JDK 17、Docker 和 Compose。平台需要访问数据库和允许的模型/业务服务；数据库不需要对公网开放。
-
-容量取决于模型延迟、并发、上下文与知识规模。先使用默认并发 8 进行业务压测，再根据数据库和模型配额调整，不把默认值当作容量承诺。
-
-## 构建与配置
-
-Linux/macOS 在平台根目录执行：
+镜像为 Linux amd64，容器以 UID 10001 运行，内含中英文 Tesseract。准备 Docker、部署环境文件及数据库，不需要源码或 GitHub 登录。
 
 ```bash
-chmod +x gradlew
-./gradlew clean build
-cp .env.example .env
-```
-
-Windows 使用 `.\gradlew.bat clean build` 和 `Copy-Item .env.example .env`。
-
-编辑 `.env` 中管理员凭据、数据库口令、模型 origin 与密钥。字段含义见[环境变量](./环境变量.md)。部署工具应把密钥文件限制为运维账户可读。
-
-```bash
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps
+docker pull ghcr.io/sagetripp/sparktide-platform:0.1.0
+docker run -d --name sparktide-platform \
+  --env-file platform.env \
+  -e SPARKTIDE_BIND=0.0.0.0 \
+  -p 127.0.0.1:8080:8080 \
+  -v sparktide-data:/app/data \
+  ghcr.io/sagetripp/sparktide-platform:0.1.0
 curl --fail http://127.0.0.1:8080/actuator/health
 ```
 
-Dockerfile 从本机 `server-spring/build/libs/server-spring-0.1.0-SNAPSHOT.jar` 复制制品，**必须先构建 Jar**。容器以 UID 10001 运行。
+`platform.env` 按[环境变量](./环境变量.md)配置管理员、模型密钥与出站 origin；只供服务进程使用。上面的命名卷持久化本机 H2，适合开发；生产在环境文件中配置 PostgreSQL 的 `SPARKTIDE_DB_URL`、用户与口令，并将底座置于 HTTPS 网关后。管理员凭据为空时管理 API 不接受访问。
+
+容器内 `127.0.0.1` 指向容器自身。访问宿主机业务回调或模型服务时，使用可达的内网地址；Docker Desktop 可使用 `host.docker.internal`，并同步配置 origin 白名单。入门教程采用本机 Jar，避免初次接入时处理容器网络。
+
+固定镜像 digest 见[0.1.0 发行页](https://github.com/SageTripp/sparktide-docs/releases/tag/v0.1.0)的 `platform-manifest.json`。已发布版本不覆盖。容量需以真实模型延迟、业务并发与数据量压测，不把默认并发 8 当作容量承诺。
+
+## 从私有源码自行构建
+
+取得源码权限的维护者仍可使用仓库 Dockerfile / Compose。先运行 `.\gradlew.bat clean build`，复制 `.env.example` 为 `.env` 并配置密钥，再执行 `docker compose config --quiet` 和 `docker compose up -d --build`。该开发构建默认使用 `0.1.0-SNAPSHOT`，与固定版本镜像的分发流程分开。
 
 ## 访问与持久化
 
@@ -55,7 +51,7 @@ Dockerfile 从本机 `server-spring/build/libs/server-spring-0.1.0-SNAPSHOT.jar`
 
 ## 添加业务回调密钥
 
-现有 Compose 模板只注入 `MODEL_API_KEY`。增加业务工具的 `TOOLS_API_KEY` 时，必须同时修改 Compose 的 platform.environment，不能仅在 `.env` 中增加变量。
+通过 `--env-file` 启动时，把实际变量写入环境文件即可。源码仓库的 Compose 模板只注入 `MODEL_API_KEY`。增加业务工具的 `TOOLS_API_KEY` 时，必须同时修改 Compose 的 platform.environment，不能仅在 `.env` 中增加变量。
 
 ```yaml
 services:

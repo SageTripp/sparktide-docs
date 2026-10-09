@@ -49,9 +49,9 @@ npm run docs:check
 
 本目录应作为文档仓库的根目录（package.json 与 .github 同级）。若放在大仓库子目录，需调整工作流工作目录、缓存依赖路径和上传目录。Pages → Source 选择 GitHub Actions；完成 Pages 配置后，手动在 master 分支触发部署工作流。工作流仅接受 master，普通推送不会发布站点。实际 base 从 configure-pages 元数据读取，支持仓库子路径或自定义域名。
 
-本目录作为独立文档仓库维护。2026-10-09 用户授权将文档及三个代码仓库上传至 SageTripp 个人账号，均设为私有；上传源码与部署 Pages 分开处理。部署工作流已对齐 master 分支，本次分支初始化不触发部署。部署过程参考 [VitePress 官方部署说明](https://vitepress.dev/guide/deploy#github-pages)。
+本目录作为独立文档仓库维护。2026-10-09 用户授权将文档及三个代码仓库上传至 SageTripp 个人账号，三个代码仓库保持私有；文档仓库和二进制制品按后续授权公开。部署工作流已对齐 master 分支，本次分支初始化不触发部署。部署过程参考 [VitePress 官方部署说明](https://vitepress.dev/guide/deploy#github-pages)。
 
-四个私有仓库已创建并核对远端提交：
+四个仓库已创建；三个代码仓库私有、文档仓库公开：
 
 - [sparktide-platform](https://github.com/SageTripp/sparktide-platform)：工作分支 feature/platform-foundation。
 - [sparktide-backend-sdk](https://github.com/SageTripp/sparktide-backend-sdk)：工作分支 feature/backend-sdk。
@@ -60,14 +60,34 @@ npm run docs:check
 
 四个仓库统一采用 master（主分支及 GitHub 默认分支）、dev（开发集成分支）、release/0.1、release/0.2 和上述工作分支。首次建立这些分支时引用已验证的上传版本；这不是正式产品发行。release/0.1 用于 0.1 版本发布准备，release/0.2 作为下一版本预备分支，尚无 0.2 制品或发行标签。后续工作分支经审查后合入 dev，准备发布时从 dev 更新对应 release 分支，完成验证后由维护者合入 master 并创建发行标签；发布修复同步回 dev。不直接在 master / dev 上开发，不自动清理仍在使用的工作分支，没有额外创建 main。
 
-仓库统一使用 sparktide 主题，保留各自独立 Git 历史。首次代码上传仅包含各仓库已有提交，平台及 SDK 的未提交改动仍留在本地；没有将它们打成临时存档提交。文档仓库包含本轮重构和示例，未启用 Pages 或公开制品发布。
+仓库统一使用 sparktide 主题，保留各自独立 Git 历史。首次代码上传仅包含各仓库已有提交，平台及 SDK 的未提交改动仍留在本地。发布配置在干净的 release/0.1 副本完成；本地未提交功能修改不进入 0.1.0 制品。
+
+## 二进制发行维护
+
+公开渠道：Pages 文档与 Maven 二进制目录、本文档仓库 GitHub Release、GHCR 底座镜像。Java/Kotlin 不发布源码 Jar；前端发布 dist 与类型声明；三个源代码仓库始终私有。固定版本不可覆盖，回滚消费上一版本，不改写已发布制品。
+
+1. 在三个代码仓库的 release 分支手动运行 `release.yml`，后台和底座传入固定版本。它们执行完整测试、打包，底座还检查镜像启动与未认证请求拒绝行为。
+2. 用 `gh run view` 核对成功结论、分支和源码提交。下载 `backend-release`、`frontend-release`、`platform-release` 到外部目录的 backend、frontend、platform 子目录。
+3. Actions 附件域名不可达时，可在同一代码仓库运行 `export-release.yml`，填写成功构建编号与组件名；它核对构建来源并创建私有中转 Release。通过 `gh release download` 获取相同附件，不重新构建、不改变镜像。
+4. 运行下面的准备命令；校验 manifest、SHA256、Maven ZIP 范围及前端包范围。脚本将二进制 Maven 文件加入 docs/public/maven，并更新两个示例的安装包完整性锁值。发行附件输出目录必须为空。
+
+```powershell
+python scripts/prepare-release.py --version 0.1.0 --artifacts 'D:\发行构建附件' --output 'D:\发行公开附件'
+npm run docs:examples
+npm run docs:build
+npm run docs:check
+```
+
+5. 审查、提交文档与公共 Maven 目录，在本文档仓库创建固定版本 Release 并上传公开附件及 SHA256SUMS；发行说明记录实际构建编号、提交和镜像 digest。
+6. 维护者将 GHCR package 可见性设为 Public。核对三个代码仓库仍为 private，然后分别验证匿名下载 Maven、前端 tgz、Jar 与镜像。
+7. 合入 master，手动触发 `deploy.yml`。检查公网子路径、SDK 安装、教程消费及 Pages 工作流结果；许可证或厂商实网验收不能从构建成功推断。
 
 ## 维护与发布信息
 
 - 状态：已确认；日期：2026-09-29；责任人：SparkTide 维护者。
 - 关联任务：产品使用手册重构；来源：平台 Api.kt/Registry.kt/运行配置、两类 SDK 源码与协议文件。
-- 适用版本：平台/后台 SDK 0.1.0-SNAPSHOT，前端 0.1.0，HTTP /v1、事件 1.0。
-- 公开 GitHub、许可证、制品分发和支持渠道按产品所有者要求集中占位于“产品支持/贡献与支持”，不设置伪链接或虚构授权。
+- 适用版本：公开制品统一 0.1.0，源码开发构建默认 0.1.0-SNAPSHOT，HTTP /v1、事件 1.0。
+- 固定版本分发见“开始使用/版本与获取”；许可证和商业支持由产品所有者补充，不虚构授权。
 - 主站为真实模型与业务接入路径，不以本地 Provider 替身作为产品使用主流程。
 - 旧英文 URL 在构建后输出跳转页，不保留两套互相矛盾的正文，也不进入搜索。
 - 旧设计版源码备份：同级 ../备份/git_pages-设计版-20260929-111548（不部署，依赖和构建缓存除外）。
@@ -108,7 +128,7 @@ npm run docs:check
 
 示例源在 examples/入门聊天，下载包为 docs/public/downloads/sparktide-tutorial.zip。修改示例后使用 `npm run docs:examples` 重新打包（此维护命令需要 Python 3），然后构建站点。常规站点构建仍只需要 Node，不依赖 Python。脚本排除 .local、data、build、dist、node_modules、SDK tgz；不要手工打包整个工作目录。
 
-教程源码和正文必须一致：后台构建、模型配置、YAML 和两套前端入口的完整代码块应与示例文件一致。运行验证解压下载 ZIP 后消费本地 Maven / npm 制品；不能只对仓库工程依赖运行测试。业务聊天下载契约来自 protocol/src/main/resources/business-chat.openapi.json，与普通底座 /v1 OpenAPI 区分。
+教程源码和正文必须一致：后台构建、模型配置、YAML 和两套前端入口的完整代码块应与示例文件一致。运行验证解压下载 ZIP 后消费公开 Maven / GitHub Release 制品；不能只对仓库工程依赖运行测试。业务聊天下载契约来自 protocol/src/main/resources/business-chat.openapi.json，与普通底座 /v1 OpenAPI 区分。
 
 本轮变更前备份：C:/Users/zhang/AppData/Local/Temp/sparktide-doc-restructure-20261009-095315。回滚时停止文档预览，从备份恢复 docs、scripts、README、package.json，删除本轮新增 examples/入门聊天 并重新构建；先确认目标仍在文档目录内，保留本轮后其他修改。进入 Git 管理后优先使用反向提交回退，保留后续修改。
 

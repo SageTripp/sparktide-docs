@@ -15,20 +15,20 @@ docGoal: "查 JS/TS 客户端方法、认证、会话与事件参数。"
 
 ## 安装
 
-在前端 SDK 源码仓库执行 `npm ci`、`npm test`、`npm run build`、`npm pack`，将生成的 `.tgz` 放入业务项目的 `vendor` 目录。当前制品本地安装，未公开发布到 npm。选择业务项目的包管理器：
+直接安装 GitHub Release 的固定版本安装包，无需访问私有源码仓库，也无需手写 HTTP / SSE API 方法。选择业务项目的包管理器：
 
 ::: code-group
 
 ```sh [npm]
-npm install ./vendor/sparktide-frontend-sdk-0.1.0.tgz
+npm install https://github.com/SageTripp/sparktide-docs/releases/download/v0.1.0/sparktide-frontend-sdk-0.1.0.tgz
 ```
 
 ```sh [pnpm]
-pnpm add ./vendor/sparktide-frontend-sdk-0.1.0.tgz
+pnpm add https://github.com/SageTripp/sparktide-docs/releases/download/v0.1.0/sparktide-frontend-sdk-0.1.0.tgz
 ```
 
 ```sh [Yarn]
-yarn add ./vendor/sparktide-frontend-sdk-0.1.0.tgz
+yarn add https://github.com/SageTripp/sparktide-docs/releases/download/v0.1.0/sparktide-frontend-sdk-0.1.0.tgz
 ```
 
 :::
