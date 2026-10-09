@@ -1,13 +1,15 @@
 import DefaultTheme from 'vitepress/theme'
-import { h } from 'vue'
+import { defineComponent, h } from 'vue'
 import { useData, withBase } from 'vitepress'
 import { tutorialSteps } from '../navigation.mts'
+import { useSyncedCodeGroups } from './useSyncedCodeGroups'
 import './custom.css'
 export default {
   extends: DefaultTheme,
-  Layout: () => {
+  Layout: defineComponent({ setup() {
+    useSyncedCodeGroups()
     const { frontmatter } = useData()
-    return h(DefaultTheme.Layout, null, {
+    return () => h(DefaultTheme.Layout, null, {
       'doc-before': () => {
         const step = Number(frontmatter.value.tutorialStep)
         if (step) return h('nav', {class:'tutorial-progress', 'aria-label':'入门教程进度'}, [
@@ -25,7 +27,7 @@ export default {
           h('a', {href:withBase('/教程/README.html')}, '第一次接入：从教程开始')
         ])
       },
-      'doc-after': () => h('div', { class: 'doc-meta' }, `适用版本：0.1 发布线 · 最近核对：${frontmatter.value.updated || '2026-09-29'} · SparkTide 产品文档`)
+      'doc-after': () => h('div', { class: 'doc-meta' }, `适用版本：${frontmatter.value.productVersion || '0.1 发布线'} · 最近核对：${frontmatter.value.updated || '2026-09-29'} · SparkTide 产品文档`)
     })
-  }
+  } })
 }

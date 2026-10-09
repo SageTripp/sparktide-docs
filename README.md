@@ -6,6 +6,10 @@
 
 文档使用简体中文领域目录；docs/README.md 通过 VitePress rewrites 输出首页 index.html。每个领域有 README 导航。docs/.vitepress/navigation.mts 按阅读任务组织侧栏，教程显式前后顺序，技术参考按主题折叠；原专题 URL 保留。
 
+代码标签按四类分别联动：Java / Kotlin、React / Vue、npm / pnpm / Yarn、Gradle Kotlin DSL / Gradle Groovy DSL / Maven。选择会同步本页同类标签，并在站内导航及刷新后恢复；不含所选项的代码组保留原选择。浏览器禁止本地存储时仍支持同页及站内导航联动。新增示例继续使用原生 `code-group` 和这些标签名称即可；其他文件名或标签保持独立。实现来源：`docs/.vitepress/theme/useSyncedCodeGroups.ts`，更新日期：2026-10-09。
+
+[SDK 简化接入（开发版）](docs/开发接入/SDK简化接入.md) 展示新的单助手声明及 React/Vue useChat，明确区分本地实现与公开 0.1.0。2026-10-09 根路径与 /SparkTide/ 子路径均完成构建及检查：110 个 HTML、11140 个本地链接/资源/锚点通过。预览服务在重新构建后可能保留旧 HTML，需要重启相应预览进程再检查新资源。
+
 | 领域 | 内容 |
 | --- | --- |
 | 开始使用 | 产品分工、阅读地图、版本获取；旧快速开始仍可进入教程 |
