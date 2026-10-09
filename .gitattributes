@@ -1,0 +1,2 @@
+# Maven 公开附件须保持构建字节，禁止 Windows 自动转换 POM 换行。
+docs/public/maven/** -text

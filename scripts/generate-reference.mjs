@@ -83,5 +83,5 @@ for(const[name,s]of Object.entries(schemas)){
  definitions+=`## ${name} {#schema-${name.toLowerCase()}}\n\n${notes[name]||''}\n`+table(s)
  definitions+='\n::: details 完整机器定义\n\n```json\n'+JSON.stringify(s,null,2)+'\n```\n\n:::\n\n'
 }
-await writeFile(path.join(root,'接口参考/数据结构.md'),definitions)
+await writeFile(path.join(root,'接口参考/数据结构.md'),definitions.trimEnd()+'\n')
 console.log(`生成 ${count} 个操作、${Object.keys(schemas).length} 个数据结构参考`)
