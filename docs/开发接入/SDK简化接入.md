@@ -1,7 +1,7 @@
 ---
 title: "新版 SDK：从声明到聊天（开发版）"
 productVersion: "开发源码；公开 0.1.0 不含此 API"
-updated: "2026-10-10"
+updated: "2026-10-11"
 status: "分阶段实现与本地验证"
 owner: "SparkTide 维护者"
 source: "AiModule / IdentityResolver / AiClient / React 与 Vue 适配器"
@@ -14,7 +14,7 @@ docGoal: "按顺序声明业务能力、接入现有登录，再使用完整聊�
 先在业务后台声明模型和助手，再接入已有登录，最后在前端放入聊天组件。工具、知识、审批、引用和业务组件都沿用这条接入路径；需要定制时，直接使用相同客户端和状态 API。
 
 ::: warning 当前版本
-本页介绍开发源码中已经实现的 API，公开的 **0.1.0 安装包不包含这些新 API**。使用已发布版本请走[连续教程](../教程/README.md)。新版尚未完成模型密钥托管、附件、模型目录及正式发行，不能把本页当作新版本发布公告。
+本页介绍开发源码中已经实现的 API，公开的 **0.1.0 安装包不包含这些新 API**。使用已发布版本请走[连续教程](../教程/README.md)。新版尚未完成附件、模型目录及正式发行，不能把本页当作新版本发布公告。
 :::
 
 ## 你需要完成哪些事
@@ -43,7 +43,7 @@ import org.springframework.context.annotation.Bean;
 AiModule aiModule() {
     var company = Provider.openAICompatible("company")
         .baseUrl("https://models.example/v1")
-        .credential(Credential.reference("MODEL_API_KEY"))
+        .credential(Credential.env("MODEL_API_KEY"))
         .build();
     var chat = company.model("chat")
         .remoteId("your-model-id")
@@ -70,7 +70,7 @@ import org.springframework.context.annotation.Bean
 fun aiModule(): AiModule = aiModule("orders") {
     val company = provider("company") {
         baseUrl = "https://models.example/v1"
-        credential = Credential.reference("MODEL_API_KEY")
+        credential = Credential.env("MODEL_API_KEY")
     }
     val chat = model("chat", company) {
         remoteId = "your-model-id"
@@ -86,7 +86,7 @@ fun aiModule(): AiModule = aiModule("orders") {
 
 :::
 
-将地址、模型标识和能力改成实际供应商配置。`MODEL_API_KEY` 是底座已授权的环境变量引用，不能写真实 Key；目前 `Credential.env` 的安全托管还未完成，使用它会明确失败。模型能力需符合供应商实际支持，SDK 不自行推测。
+将地址、模型标识和能力改成实际供应商配置。`MODEL_API_KEY` 是业务后台部署环境中的变量名，不能把真实 Key 写进代码。开发同步或受控部署时，SDK 将值交给底座加密托管；声明只有应用及目标地址绑定的引用。底座需先配置托管主密钥和出站允许列表，见下面的密钥部署步骤。已有底座环境变量方式仍可使用 `Credential.reference(name)`。模型能力需符合供应商实际支持，SDK 不自行推测。
 
 ### 同一个模块放多个助手、多个知识源
 
@@ -219,6 +219,22 @@ sparktide:
 
 与上一段合并为一个 `sparktide` 节点。底座必须能访问回调 URL，并将凭据引用绑定到此应用及目标 origin。当前回调运行在 Starter 独立端口；工具幂等账本目录必须持久化。
 
+### 模型密钥的环境与发布
+
+1. 底座运维通过 Secret 注入 `SPARKTIDE_CREDENTIAL_KEYRING`（keyId → 32 字节随机 AES 密钥的 Base64，JSON 对象）与 `SPARKTIDE_CREDENTIAL_ACTIVE_KEY`；在出站允许列表中配置模型 origin。未配置主密钥时拒绝托管。
+2. 业务后台部署环境设置 `MODEL_API_KEY`。开发环境 auto-sync 开启时会同步值；生产 VERIFY 启动只检查元数据，不读取或上传模型密钥。
+3. 正式发布前，在受控部署程序调用模块准备结果的 `synchronizeCredentials`，再执行草稿注册与显式发布。写请求包含已观察的修订，冲突会失败，不盲目覆盖。
+
+```java
+var prepared = module.prepare(version, callbackBase, callbackSecretReference);
+prepared.synchronizeCredentials(client, "发布前同步模型凭据")
+    .toCompletableFuture().join();
+```
+
+密钥不进入模型定义、清单、审计或日志。上传要求 HTTPS（本机字面量回环地址可使用 HTTP）。底座 GET 只返回元数据；跨应用、跨 origin、密文篡改和已撤销引用都会拒绝。主密钥轮换时保留旧 key，重新同步后用新 key 加密；全部迁移完成前不能删除旧 key。
+
+带业务回调的生产发布流程：先同步凭据，再显式使用 `deployment.startup: REGISTER` 注册草稿并启动回调/租约，通过 `SparkTideRegistration.release(reason)` 发布，后续正常启动恢复 VERIFY。默认生产 VERIFY 不会自动创建新版本或替你完成首次发布。
+
 ## 4. 前端一次连接，直接使用完整聊天组件
 
 先创建稳定客户端，整个已登录会话复用它。以下是业务 Bearer 登录示例：
@@ -320,6 +336,6 @@ try {
 
 ## 实施边界与下一步
 
-已完成模块化模型/助手/知识声明、方法工具与知识适配、组件契约与自主/固定渲染、完整前端状态、可信登录委托和统一配置。当前仍需完成模型环境密钥托管、附件、模型/入口目录、完整独立安装示例和新版正式发行。底座与 SDK 的本地测试不代表真实模型厂商或生产部署验收。
+已完成模块化模型/助手/知识声明、方法工具与知识适配、组件契约与自主/固定渲染、完整前端状态、可信登录委托和统一配置。模型环境密钥托管已实现；当前仍需完成附件、模型/入口目录、完整独立安装示例和新版正式发行。底座与 SDK 的本地测试不代表真实模型厂商或生产部署验收。
 
 学习现有业务规则可继续阅读[业务工具](../使用指南/业务工具.md)、[知识库](../使用指南/知识库.md)、[界面组件](../使用指南/界面组件.md)。这些页面中的旧版本 API 仍属于公开 0.1.0；新版完整教程迁移将与已验证源码同步推进。
