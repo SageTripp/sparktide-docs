@@ -32,7 +32,7 @@ export const sidebar = [
   ]),
   group('SDK 参考 · 查方法与配置', [
     page('SDK 参考总览','开发接入/README'),page('已有项目怎样接入','开发接入/接入流程'),
-    page('SDK 简化接入（开发版）','开发接入/SDK简化接入'),
+    page('新版 SDK 调用（开发版）','开发接入/SDK简化接入'),
     page('业务后台 SDK · Java / Kotlin','开发接入/业务后台SDK'),page('前端聊天 SDK · JS / TS','开发接入/前端SDK'),
     page('React / Vue 组件与状态层','开发接入/React与Vue'),page('业务接入专题索引','开发接入/业务接入/README'),page('类型化客户端（兼容参考）','开发接入/业务接入/类型化聊天')
   ]),
