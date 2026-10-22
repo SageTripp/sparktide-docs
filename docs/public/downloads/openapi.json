@@ -5295,7 +5295,7 @@
     "/v1/apps/{app}/activity/runs": {
       "get": {
         "operationId": "listApplicationActivity",
-        "summary": "listApplicationActivity",
+        "summary": "查询应用运行记录",
         "parameters": [
           {
             "name": "app",
@@ -5323,6 +5323,56 @@
               "default": 0,
               "minimum": 0,
               "maximum": 1000000
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "运行状态，省略时查询全部状态",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "QUEUED",
+                "RUNNING",
+                "WAITING_CONFIRMATION",
+                "SUCCEEDED",
+                "FAILED",
+                "CANCELLED",
+                "TIMED_OUT"
+              ]
+            }
+          },
+          {
+            "name": "runId",
+            "in": "query",
+            "required": false,
+            "description": "完整运行标识，精确匹配",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "开始时间下界，Unix毫秒，包含边界",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "开始时间上界，Unix毫秒，包含边界；不得早于from",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
             }
           }
         ],
@@ -5666,6 +5716,14 @@
                     },
                     "exportedSha256": {
                       "type": "string"
+                    },
+                    "redactionMode": {
+                      "type": "string",
+                      "enum": ["BASELINE", "POLICY", "RAW"],
+                      "description": "POLICY 始终叠加内置元数据白名单，不能放宽 BASELINE；仅部署配置可开启 RAW。"
+                    },
+                    "rawExport": {
+                      "type": "boolean"
                     },
                     "payload": {
                       "type": "string"
@@ -13284,6 +13342,820 @@
             }
           }
         }
+      },
+      "post": {
+        "summary": "创建当前用户的空会话",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "创建当前业务用户的空会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyConversation"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createConversation",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "app"
+          }
+        ]
+      }
+    },
+    "/v1/apps/{app}/managed-definitions": {
+      "post": {
+        "summary": "注册应用范围内代码管理的精确版本声明",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedDefinition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "409": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "新建或重复声明",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Registry"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "registerManagedDefinition",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "app"
+          }
+        ]
+      }
+    },
+    "/v1/apps/{app}/identity-delegation": {
+      "get": {
+        "operationId": "identityDelegationPolicy",
+        "summary": "Read explicit backend identity delegation policy",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityDelegationPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "configureIdentityDelegation",
+        "summary": "Platform admin grants or revokes issuer and tenant scope",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Current policy revision; 0 for first configuration"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityDelegationPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityDelegationPolicyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{app}/identity-delegations": {
+      "post": {
+        "operationId": "delegateBusinessIdentity",
+        "summary": "Exchange permitted application backend credential for short-lived USER",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelegatedCredential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityDelegationRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/apps/{app}/credentials/{credentialId}": {
+      "get": {
+        "operationId": "getManagedCredential",
+        "summary": "读取应用托管凭据元数据",
+        "description": "应用管理权限，仅限当前应用；平台管理员可管理明确应用。托管值只能发往已绑定且被运维允许的 origin。",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "元数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedCredential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "401": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "403": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "404": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "409": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "412": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "428": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "503": {
+            "description": "校验、授权、修订或凭据存储错误"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putManagedCredential",
+        "summary": "加密创建或轮换应用凭据",
+        "description": "应用管理权限，仅限当前应用；平台管理员可管理明确应用。托管值只能发往已绑定且被运维允许的 origin。",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "当前 revision；首次创建为 0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "元数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedCredential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "401": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "403": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "404": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "409": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "412": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "428": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "503": {
+            "description": "校验、授权、修订或凭据存储错误"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedCredentialWrite"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeManagedCredential",
+        "summary": "撤销凭据并清除密文",
+        "description": "应用管理权限，仅限当前应用；平台管理员可管理明确应用。托管值只能发往已绑定且被运维允许的 origin。",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "当前 revision；首次创建为 0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "元数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedCredential"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "401": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "403": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "404": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "409": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "412": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "428": {
+            "description": "校验、授权、修订或凭据存储错误"
+          },
+          "503": {
+            "description": "校验、授权、修订或凭据存储错误"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedCredentialRevoke"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/profile": {
+      "get": {
+        "operationId": "getConsoleProfile",
+        "summary": "读取控制台个人资料",
+        "description": "仅 PLATFORM_ADMIN 和 APP_ADMIN 可访问。归属由服务端已认证身份确定；未设置时返回默认值。",
+        "responses": {
+          "200": {
+            "description": "当前身份的展示资料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsoleProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateConsoleProfile",
+        "summary": "更新控制台个人资料",
+        "description": "仅允许修改显示名称与头像颜色，不改变身份和权限。相同 appId、tenantId、subjectId 共享资料；共享平台凭据也共享资料。",
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "当前 revision 的十进制字符串，可带双引号。未设置资料时为 0；缺失或过期返回 412。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsoleProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "当前身份的展示资料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsoleProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -13548,6 +14420,15 @@
           },
           "definition": {
             "$ref": "#/components/schemas/Definition"
+          },
+          "managedBy": {
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string",
+            "description": "代码声明来源；存在时管理页面只读，变更通过原声明来源发布新版本"
+          },
+          "declarationHash": {
+            "description": "声明定义的 SHA-256 内容摘要",
+            "type": "string"
           }
         },
         "required": [
@@ -13782,6 +14663,10 @@
       "ToolDefinition": {
         "type": "object",
         "properties": {
+          "renderWith": {
+            "$ref": "#/components/schemas/Ref",
+            "description": "固定渲染真实工具结果的 UI 精确引用，必须同时属于助手 allowedUi。"
+          },
           "description": {
             "type": "string"
           },
@@ -24003,6 +24888,402 @@
         "required": [
           "id",
           "deleted"
+        ]
+      },
+      "ConversationCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 128,
+            "default": ""
+          }
+        }
+      },
+      "EmptyConversation": {
+        "required": [
+          "id",
+          "title",
+          "messages"
+        ],
+        "properties": {
+          "messages": {
+            "items": {
+              "required": [
+                "role",
+                "content"
+              ],
+              "properties": {
+                "errorCode": {
+                  "type": "string"
+                },
+                "runId": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "role": {
+                  "enum": [
+                    "user",
+                    "assistant"
+                  ]
+                },
+                "messageId": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "maxItems": 20,
+            "type": "array"
+          },
+          "updatedAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 128
+          }
+        },
+        "type": "object"
+      },
+      "ManagedDefinition": {
+        "required": [
+          "kind",
+          "id",
+          "version",
+          "definition",
+          "managedBy"
+        ],
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/Definition"
+          },
+          "id": {
+            "type": "string"
+          },
+          "managedBy": {
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "IdentityDelegationPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "issuers": {
+            "type": "array",
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "tenants": {
+            "type": "array",
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          "maxTtlSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 900
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "appId",
+          "enabled",
+          "issuers",
+          "tenants",
+          "maxTtlSeconds",
+          "revision"
+        ]
+      },
+      "IdentityDelegationPolicyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "issuers": {
+            "type": "array",
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "tenants": {
+            "type": "array",
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          "maxTtlSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 900
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "enabled",
+          "issuers",
+          "tenants",
+          "maxTtlSeconds",
+          "reason"
+        ]
+      },
+      "IdentityDelegationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "tenantId": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "ttlSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 900,
+            "default": 900
+          }
+        },
+        "required": [
+          "subjectId",
+          "tenantId"
+        ]
+      },
+      "DelegatedCredential": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string",
+            "writeOnly": false,
+            "description": "Short-lived backend-only credential. Never forward to browsers or log."
+          },
+          "expiresAt": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER"
+            ]
+          },
+          "appId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt",
+          "subjectId",
+          "tenantId",
+          "role",
+          "appId"
+        ]
+      },
+      "ManagedCredential": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "id",
+          "origin",
+          "revision",
+          "enabled",
+          "keyId"
+        ],
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "keyId": {
+            "type": "string"
+          }
+        },
+        "description": "托管凭据元数据；不返回值、密文、nonce 或密钥摘要。"
+      },
+      "ManagedCredentialWrite": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "origin",
+          "secret",
+          "reason"
+        ],
+        "properties": {
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "description": "已被运维允许的精确 origin；既有绑定不可修改"
+          },
+          "secret": {
+            "type": "string",
+            "writeOnly": true,
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[!-~]+$"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "ManagedCredentialRevoke": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "ConsoleProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "控制台显示名称；尚未设置时为空字符串。"
+          },
+          "avatarColor": {
+            "type": "string",
+            "enum": [
+              "blue",
+              "teal",
+              "violet",
+              "amber",
+              "slate"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updatedAt": {
+            "type": "integer",
+            "format": "int64",
+            "description": "最后修改时间，Unix 毫秒；未设置时为 0。"
+          }
+        },
+        "required": [
+          "displayName",
+          "avatarColor",
+          "revision",
+          "updatedAt"
+        ]
+      },
+      "ConsoleProfileUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "去除首尾空白后为 1–64 个 Unicode 字符，不含控制字符。"
+          },
+          "avatarColor": {
+            "type": "string",
+            "enum": [
+              "blue",
+              "teal",
+              "violet",
+              "amber",
+              "slate"
+            ]
+          }
+        },
+        "required": [
+          "displayName",
+          "avatarColor"
         ]
       }
     }
