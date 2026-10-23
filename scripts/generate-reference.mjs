@@ -3,6 +3,8 @@ import path from 'node:path'
 const root = path.resolve('docs')
 const contract = JSON.parse(await readFile(path.join(root, 'public/downloads/openapi.json'), 'utf8'))
 const schemas = contract.components.schemas
+const updated = process.env.DOCS_UPDATED ?? '2026-10-23'
+if (!/^\d{4}-\d{2}-\d{2}$/.test(updated)) throw new Error('DOCS_UPDATED 必须为 YYYY-MM-DD')
 const esc = value => String(value ?? '').replaceAll('|', '\\|').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\n', ' ')
 const schemaName = value => value.$ref?.split('/').pop()
 function type(s) {
@@ -33,7 +35,16 @@ function table(s, prefix = '') {
   visit(s,prefix)
   return rows.length ? '\n| 字段 | 类型 | 本层必填 | 默认值与约束 |\n| --- | --- | --- | --- |\n'+rows.join('\n')+'\n' : '\n类型：'+type(s)+'。'+constraints(s)+'\n'
 }
-const meta=title=>`---\ntitle: ${title}\nproductVersion: "0.1"\nupdated: "2026-10-03"\nstatus: 已确认\nowner: SparkTide 维护者\nsource: protocol/openapi.json 与 Api/AuditApi/ObservationApi\n---\n\n# ${title}\n\n`
+const meta=title=>`---\ntitle: ${title}\nproductVersion: "HTTP 1.0 当前契约，不代表新公开发行"\nupdated: "${updated}"\nstatus: 已确认\nowner: SparkTide 维护者\nsource: protocol/openapi.json 与 Api/AuditApi/ObservationApi\n---\n\n# ${title}\n\n`
+function parameter(value) {
+ if (!value.$ref) return value
+ const prefix='#/components/parameters/'
+ if (!value.$ref.startsWith(prefix)) throw new Error('不支持的参数引用：'+value.$ref)
+ const name=value.$ref.slice(prefix.length).replaceAll('~1','/').replaceAll('~0','~')
+ const resolved=contract.components.parameters?.[name]
+ if (!resolved || resolved.$ref) throw new Error('参数引用不存在或循环：'+value.$ref)
+ return resolved
+}
 const groups={
  '身份与应用':{intro:'平台管理员创建应用、签发与撤销本地凭据；有效身份读取 /me，自身应用身份读取应用。默认入口由应用管理身份设置，并携带当前应用 revision。',operations:[]},
  '能力注册':{intro:'应用能力操作需要 APP_ADMIN 或 PLATFORM_ADMIN；公共模型与全局绑定需要平台管理员。注册正文是 id/version/definition，更新正文直接是 definition。单资源发布需先发布依赖；批次发布可在一个事务内发布整条依赖链。',operations:[]},
@@ -53,8 +64,8 @@ for(const [route,methods]of Object.entries(contract.paths))for(const[method,op]o
  if(!['get','post','put','delete','patch'].includes(method))continue
  count++
  let text=`\n## ${method.toUpperCase()} ${route}\n\n`
- const parameters=[...(methods.parameters || []),...(op.parameters || [])]
- if(parameters.length){text+='### 参数\n\n| 名称 | 位置 | 必填 | 类型与约束 |\n| --- | --- | --- | --- |\n';for(const p of parameters)text+=`| ${esc(p.name)} | ${p.in} | ${p.required?'是':'否'} | ${type(p.schema||{})}；${constraints(p.schema||{})} |\n`}
+ const parameters=[...(methods.parameters || []),...(op.parameters || [])].map(parameter)
+ if(parameters.length){text+='### 参数\n\n| 名称 | 位置 | 必填 | 类型与约束 |\n| --- | --- | --- | --- |\n';for(const p of parameters)text+=`| ${esc(p.name)} | ${p.in} | ${p.required?'是':'否'} | ${type(p.schema||{})}；${constraints(p.schema||{})}${p.description?'；'+esc(p.description):''} |\n`}
  if(op.requestBody){text+='\n### 请求正文\n';for(const[mime,body]of Object.entries(op.requestBody.content||{})){text+=`\nContent-Type：\`${mime}\`；正文${op.requestBody.required?'必填':'可选'}。\n`+table(body.schema||{})}}
  text+='\n### 响应\n\n| HTTP | 响应类型 | 数据结构 |\n| --- | --- | --- |\n'
  for(const[status,response]of Object.entries(op.responses||{})){
