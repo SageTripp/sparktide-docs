@@ -36,9 +36,9 @@ export default defineConfig({
     logo: { src: '/sparktide-logo.png', alt: 'SparkTide 启澜' },
     siteTitle: 'SparkTide · 启澜',
     nav: [
-      {text:'接入指南',link:'/教程/README',activeMatch:'/教程/|/开始使用/阅读地图'},
+      {text:'接入指南',link:'/开发接入/SDK简化接入',activeMatch:'/开发接入/SDK简化接入|/教程/|/开始使用/阅读地图'},
       {text:'使用指南',link:'/使用指南/README',activeMatch:'/使用指南/|/开发接入/(业务接入|模型治理|知识接入|运行时)/'},
-      {text:'SDK 参考',link:'/开发接入/README',activeMatch:'/开发接入/(README|业务后台SDK|前端SDK|React与Vue|接入流程|SDK简化接入)'},
+      {text:'SDK 参考',link:'/开发接入/README',activeMatch:'/开发接入/(README|业务后台SDK|前端SDK|React与Vue|接入流程)'},
       {text:'部署与运维',link:'/部署运维/README',activeMatch:'/部署运维/|/开发接入/运维治理/'},
       {text:'API',link:'/接口参考/README',activeMatch:'/接口参考/'},
       {text:'0.1',items:[{text:'版本与获取',link:'/开始使用/版本与获取'},{text:'能力状态',link:'/产品支持/能力状态'},{text:'常见问题',link:'/产品支持/常见问题'},{text:'版本说明',link:'/产品支持/版本说明'},{text:'控制台操作',link:'/使用指南/控制台/README'}]}

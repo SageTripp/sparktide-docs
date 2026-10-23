@@ -1,189 +1,109 @@
 ---
-title: "新版 SDK：从声明到聊天（开发版）"
-productVersion: "开发源码；公开 0.1.0 不含此 API"
-updated: "2026-10-11"
-status: "分阶段实现与本地验证"
+title: "SDK 接入：注解声明与现有业务认证"
+productVersion: "开发候选；公开 0.1.0 不含新 API"
+updated: "2026-10-23"
+status: "本轮本机隔离候选验收完成；公共发行与生产容量另记"
 owner: "SparkTide 维护者"
-source: "AiModule / IdentityResolver / AiClient / React 与 Vue 适配器"
-topic: "SDK 参考 · 开发版"
-docGoal: "按顺序声明业务能力、接入现有登录，再使用完整聊天组件和任务 API。"
+source: "双 SDK 类型化声明、BusinessAuthenticationRelay、AiClient 与 ChatStore"
 ---
 
-# 新版 SDK：从声明到聊天
+# SDK 接入：注解声明与现有业务认证
 
-先在业务后台声明模型和助手，再接入已有登录，最后在前端放入聊天组件。工具、知识、审批、引用和业务组件都沿用这条接入路径；需要定制时，直接使用相同客户端和状态 API。
+后台声明 Provider、Model、Agent 和业务工具，前端创建一个客户端，再放入聊天面板。SDK 负责模型协议、依赖注册、认证传递、回调和事件恢复；业务保留已有登录、授权、事务与数据权限。
 
-::: warning 当前版本
-本页介绍开发源码中已经实现的 API，公开的 **0.1.0 安装包不包含这些新 API**。使用已发布版本请走[连续教程](../教程/README.md)。新版尚未完成附件、模型目录及正式发行，不能把本页当作新版本发布公告。
+::: warning 版本边界
+本页为本轮已实现的开发候选 API。后台验证候选 `0.1.1-auth.20261023-6` 只在内部隔离 Maven 文件仓库提供；前端使用同轮打包的候选 tgz。必须配套支持 business-auth/1.0 的平台。公开 0.1.0 不含这些 API，尚未发布新的公共版本；旧固定版本下载示例见[连续教程](../教程/README.md)。
 :::
 
-## 你需要完成哪些事
+## 1. 安装按需依赖
 
-| 顺序 | 写在哪里 | 完成后得到什么 |
-| --- | --- | --- |
-| 1 | 业务后台 AiModule Bean | 一组可共享模型、知识、工具的助手 |
-| 2 | 平台一次性授权、后台 IdentityResolver | 已登录用户可直接聊天，无需第二套用户登录 |
-| 3 | 后台 application.yml | 声明部署和 `/api/ai` 标准 HTTP API |
-| 4 | 前端应用入口与聊天页面 | 流式消息、会话、审批、引用和业务组件 |
-| 5 | 独立发布步骤 | 生产只验证已发布定义，再挂载业务回调 |
+SDK 生产实现使用 Kotlin，Java 业务可直接调用公开 API。Java 17 / Boot 4 使用 sdk-spring-boot-starter；Java 8 / Boot 2.6.6 使用 sdk-spring-boot2-starter。同一应用只选一套核心。模型适配器独立加入 sdk-model-deepseek、sdk-model-opencode-go、sdk-model-openai、sdk-model-openai-compatible 或 sdk-model-ollama，group 均为 dev.sparktide。
 
-底座仍管理会话与运行；业务后台处理登录和业务能力；前端只访问业务后台。
+Boot 2 / Maven 的父 BOM 可能覆盖传递依赖，需将 kotlin.version 统一到 **2.3.20**，核对 stdlib、reflect 及旧 jdk7/jdk8 拆分包依赖树。编译成功不能代替运行验证。配置与安装见[后台 SDK](业务后台SDK.md)。
 
-## 1. 声明模型和助手
+## 2. 按配置归属声明
 
-Java 和 Kotlin 生成同一份能力图。提供商、模型各声明一次，多个助手可直接复用这些对象，无需自己拼接底层绑定和引用。
+| 配置组 | 内容 |
+| --- | --- |
+| Provider | 连接地址、供应商 API Key、HTTP/账户选项 |
+| Model | 模型标识、能力、上下文/输出限制、推理选项、Provider 类引用 |
+| Agent | 提示词、模型类数组、工具/知识/委派类型、入口权限、运行预算 |
+| YAML | 平台地址、应用和接入凭据、回调与部署对接信息 |
 
-::: code-group
-
-```java [Java]
-import dev.sparktide.sdk.*;
-import org.springframework.context.annotation.Bean;
-
-@Bean
-AiModule aiModule() {
-    var company = Provider.openAICompatible("company")
-        .baseUrl("https://models.example/v1")
-        .credential(Credential.env("MODEL_API_KEY"))
-        .build();
-    var chat = company.model("chat")
-        .remoteId("your-model-id")
-        .capabilities(c -> c
-            .supports(ModelCapabilities.Feature.STREAMING, true)
-            .supports(ModelCapabilities.Feature.TOOL_CALLING, true))
-        .build();
-    var assistant = Agent.builder("assistant")
-        .instructions("你是业务助手，请用中文回答。")
-        .model(chat)
-        .build();
-    return AiModule.builder("orders")
-        .defaultAgent(assistant)
-        .build();
-}
-```
-
-```kotlin [Kotlin]
-import dev.sparktide.sdk.*
-import dev.sparktide.sdk.kotlin.aiModule
-import org.springframework.context.annotation.Bean
-
-@Bean
-fun aiModule(): AiModule = aiModule("orders") {
-    val company = provider("company") {
-        baseUrl = "https://models.example/v1"
-        credential = Credential.env("MODEL_API_KEY")
-    }
-    val chat = model("chat", company) {
-        remoteId = "your-model-id"
-        capabilities { streaming = true; toolCalling = true }
-    }
-    val assistant = agent("assistant") {
-        instructions = "你是业务助手，请用中文回答。"
-        model(chat)
-    }
-    defaultAgent(assistant)
-}
-```
-
-:::
-
-将地址、模型标识和能力改成实际供应商配置。`MODEL_API_KEY` 是业务后台部署环境中的变量名，不能把真实 Key 写进代码。开发同步或受控部署时，SDK 将值交给底座加密托管；声明只有应用及目标地址绑定的引用。底座需先配置托管主密钥和出站允许列表，见下面的密钥部署步骤。已有底座环境变量方式仍可使用 `Credential.reference(name)`。模型能力需符合供应商实际支持，SDK 不自行推测。
-
-### 同一个模块放多个助手、多个知识源
-
-`defaultAgent` 指定唯一默认入口，`expose` 开放其他入口。只被 `delegateTo` 引用的助手保持内部可调用，浏览器不能直接调用它。托管知识集合先声明，内容通过[知识库接口](../使用指南/知识库.md)导入；远程业务知识可以使用方法适配。
-
-::: code-group
-
-```java [Java]
-// 以下接在模型 chat 声明之后。
-var handbook = KnowledgeCollection.builder("handbook")
-    .description("员工业务手册").build();
-var returns = KnowledgeCollection.builder("returns")
-    .description("退款政策").build();
-var refund = Agent.builder("refund")
-    .instructions("依据退款政策给出建议。")
-    .model(chat).knowledge(handbook, returns).build();
-var support = Agent.builder("support")
-    .instructions("回答业务问题，退款问题委托专门助手。")
-    .model(chat).knowledge(handbook).delegateTo(refund).build();
-return AiModule.builder("orders")
-    .defaultAgent(support)
-    .expose(refund) // 删除这一行，refund 就只有内部委托入口。
-    .build();
-```
-
-```kotlin [Kotlin]
-// 以下位于 aiModule 块中，复用上面声明的 chat。
-val handbook = knowledgeCollection("handbook") {
-    description = "员工业务手册"
-}
-val returns = knowledgeCollection("returns") {
-    description = "退款政策"
-}
-val refund = agent("refund") {
-    instructions = "依据退款政策给出建议。"
-    model(chat)
-    knowledge(handbook, returns)
-}
-val support = agent("support") {
-    instructions = "回答业务问题，退款问题委托专门助手。"
-    model(chat)
-    knowledge(handbook)
-    delegateTo(refund)
-}
-defaultAgent(support)
-expose(refund) // 删除这一行，refund 就只有内部委托入口。
-```
-
-:::
-
-同名同版本资源内容必须一致，共享对象会去重。多个 AiModule Bean 可以共存，但整个应用只能有一个默认助手。助手、工具、知识和模型的版本由模块部署版本统一指定；显式外部资源可继续使用精确版本。
-
-## 2. 接入已有业务登录
-
-由业务安全框架先认证请求，再让 SDK 从 Principal 得到业务用户。没有已认证 Principal 时直接拒绝，不从浏览器 Context 读取 userId 或 tenantId。
-
-::: code-group
-
-```java [Java]
-import dev.sparktide.sdk.UserIdentity;
-import dev.sparktide.sdk.spring.IdentityResolver;
-
-@Bean
-IdentityResolver aiIdentity() {
-    // 本例是已由业务服务确定的单租户系统。
-    return principal -> UserIdentity.of(principal.getName(), "tenant-a");
-}
-```
-
-```kotlin [Kotlin]
-import dev.sparktide.sdk.UserIdentity
-import dev.sparktide.sdk.spring.IdentityResolver
-
-@Bean
-fun aiIdentity() = IdentityResolver { principal ->
-    UserIdentity.of(principal.name, "tenant-a")
-}
-```
-
-:::
-
-多租户系统从服务端用户目录读取租户，替换示例中的常量。平台管理员还需一次性授予应用后台的签发主体和租户范围，随后后台 SDK 自动换取短期 USER 凭据并缓存，浏览器不会获得该凭据。
-
-一次性部署授权可通过 Java SDK 执行，无需逐用户操作管理页面：
+以下三个 Java public 类分别放在同名文件，并位于业务 Spring Boot 扫描包中。示例使用 OpenAI 兼容适配器；模型名和能力声明须按实际供应商验证。
 
 ```java
-var admin = new PlatformClient(platformUrl, "orders", adminCredentialSupplier);
-var policy = admin.identityDelegationPolicy().toCompletableFuture().join();
-admin.configureIdentityDelegation(
-    true, List.of("orders-backend"), List.of("tenant-a"), 900,
-    ((Number) policy.get("revision")).longValue(), "开通订单后台身份委托"
-).toCompletableFuture().join();
+import dev.sparktide.sdk.annotation.AiProvider;
+import dev.sparktide.sdk.provider.OpenAICompatibleProvider;
+
+@AiProvider(baseUrl = "${business.ai.base-url}", apiKey = "${business.ai.api-key}")
+public class BusinessProvider extends OpenAICompatibleProvider {}
 ```
 
-`orders-backend` 必须等于后台 APP_ADMIN 凭据的 subjectId。上述管理程序使用平台管理员凭据；业务应用只配置自己的 APP_ADMIN 凭据。默认委托关闭，策略变更或父凭据撤销会使旧委托失效。原有 ChatCredentialResolver 仍兼容。
+```java
+import dev.sparktide.sdk.annotation.AiModel;
+import dev.sparktide.sdk.annotation.Support;
+import dev.sparktide.sdk.provider.OpenAICompatibleProvider;
 
-## 3. 配置后台连接与部署
+@AiModel(model = "your-model-id", provider = BusinessProvider.class,
+    streaming = Support.SUPPORTED, toolCalling = Support.SUPPORTED)
+public class BusinessModel extends OpenAICompatibleProvider.Model {}
+```
+
+```java
+import dev.sparktide.sdk.annotation.Agent;
+
+@Agent(name = "business-assistant", instructions = "classpath:ai/assistant.md",
+    model = {BusinessModel.class}, tools = {BusinessTools.class},
+    defaultAgent = true, permissions = {"ai:read"})
+public class BusinessAssistant {}
+```
+
+Kotlin 对应的三个类型：
+
+```kotlin
+@AiProvider(baseUrl = "\${business.ai.base-url}", apiKey = "\${business.ai.api-key}")
+class BusinessProvider : OpenAICompatibleProvider()
+
+@AiModel(model = "your-model-id", provider = BusinessProvider::class,
+    streaming = Support.SUPPORTED, toolCalling = Support.SUPPORTED)
+class BusinessModel : OpenAICompatibleProvider.Model()
+
+@Agent(name = "business-assistant", instructions = "classpath:ai/assistant.md",
+    model = [BusinessModel::class], tools = [BusinessTools::class],
+    defaultAgent = true, permissions = ["ai:read"])
+class BusinessAssistant
+```
+
+Provider 的 baseUrl 是协议基础地址，endpoint 是完整请求地址，互斥。apiKey 支持直接字符串与宿主配置占位符，apiKeyEnv 支持环境变量，也可覆盖 Provider 的 apiKey() 接入已有密钥服务；同一层只选一个来源。直接真实字符串会进入 class 文件。供应商特有连接与推理选项分别通过强类型 ProviderOptions / ModelOptions 扩展，不混装成无约束参数表。
+
+Model 父类选择适配器协议；配置过的 Provider 用类引用明确关联。Java 静态嵌套 BusinessProvider.Model 不会自动绑定外层子类配置。Model 不再放 API Key 或 HTTP 连接参数。多个模型使用类型数组，首项为主模型，其余为显式候选，不意味着工具自动重试。knowledge 引用已有知识 Bean 类型，delegates 引用其他 Agent 类型；缺 Bean、重复名称或循环委派在启动时拒绝。
+
+内置适配器包含 DeepSeek、OpenCode Go、OpenAI、OpenAI 兼容与 Ollama，按独立依赖选择。DeepSeek 业务模型继承 `DeepSeekProvider.Model`，配置过的 Provider 继承 `DeepSeekProvider`；供应商密钥仍配置在 Provider，`DeepSeekModelOptions` 属于模型。SDK 默认关闭思考并封装 `max_tokens` 与 `thinking` 参数差异；当前显式启用思考返回 `UNSUPPORTED`。见[适配器依赖与示例](业务后台SDK.md#选择模型适配器)。
+
+## 3. 只实现业务工具与知识
+
+```java
+import dev.sparktide.sdk.Tool;
+import dev.sparktide.sdk.ToolContext;
+import org.springframework.stereotype.Component;
+
+@Component
+public class BusinessTools {
+    private final OrderService orders; // 业务已有服务
+    public BusinessTools(OrderService orders) { this.orders = orders; }
+
+    @Tool(name = "orders.status", description = "查询当前用户的订单状态")
+    public String status(ToolContext context) {
+        // 已重新经过原认证链；原业务服务继续判断数据权限。
+        return orders.currentStatus();
+    }
+}
+```
+
+知识方法用 @Knowledge 和 KnowledgeContext 调用已有检索服务。需要转调旧业务 HTTP 服务时，使用 `context.authentication().header("token")`；`context.authentication().token()` 只返回 Authorization 中的 Bearer token，其它认证方式返回 null。访问器随执行结束失效，已经复制的字符串无法收回，不得缓存、记录或返回认证值。
+
+## 4. 连接平台并复用现有登录
 
 ```yaml
 sparktide:
@@ -193,151 +113,81 @@ sparktide:
     credential: ${SPARKTIDE_APP_CREDENTIAL}
   http:
     path: /api/ai
+  callbacks:
+    url: ${BUSINESS_CALLBACK_URL}
+    credential: ${BUSINESS_CALLBACK_CREDENTIAL}
+    secret-reference: ${BUSINESS_CALLBACK_SECRET_REF}
   deployment:
     mode: development
     version: 1.0.0
 ```
 
-声明注册与标准 HTTP API 共享连接配置；前端不需要知道底座地址或 appId。旧配置仍可用，同义新旧键冲突会报错。
+平台一次性授权后台身份委托范围。原业务认证先产生可信 Principal，SDK 缺省把 Principal.name 映射为无租户用户，无需再实现认证设施。自定义用户对象或租户只提供 `BusinessPrincipalMapper` 字段映射，输入来自原 Shiro/Spring Security/Servlet 已认证主体；不再编写独立 IdentityResolver、登录校验或权限协议回调。
 
-| 环境 | 启动行为 |
-| --- | --- |
-| 显式 development | 注册与同步声明；冲突、已发布内容变化或未经确认的入口切换会失败 |
-| 默认 production | 只核对完全一致且已发布的声明和默认入口，然后挂载回调、续租；不自动发布 |
-
-有业务工具、远程知识、权限或上下文提供器时，再添加回调配置：
-
-```yaml
-sparktide:
-  callbacks:
-    url: ${SPARKTIDE_CALLBACK_URL}
-    credential: ${SPARKTIDE_CALLBACK_TOKEN}
-    secret-reference: ORDERS_CALLBACK_TOKEN
-    ledger-directory: ./data/ai-tool-ledger
-    port: 8089
-```
-
-与上一段合并为一个 `sparktide` 节点。底座必须能访问回调 URL，并将凭据引用绑定到此应用及目标 origin。当前回调运行在 Starter 独立端口；工具幂等账本目录必须持久化。
-
-### 模型密钥的环境与发布
-
-1. 底座运维通过 Secret 注入 `SPARKTIDE_CREDENTIAL_KEYRING`（keyId → 32 字节随机 AES 密钥的 Base64，JSON 对象）与 `SPARKTIDE_CREDENTIAL_ACTIVE_KEY`；在出站允许列表中配置模型 origin。未配置主密钥时拒绝托管。
-2. 业务后台部署环境设置 `MODEL_API_KEY`。开发环境 auto-sync 开启时会同步值；生产 VERIFY 启动只检查元数据，不读取或上传模型密钥。
-3. 正式发布前，在受控部署程序调用模块准备结果的 `synchronizeCredentials`，再执行草稿注册与显式发布。写请求包含已观察的修订，冲突会失败，不盲目覆盖。
+例如在原有安全配置中加入以下 Bean。`SysUserVO` 是 safeOps 原业务用户类型，租户值使用该系统原有部署边界；多租户业务应映射原主体中已验证的租户字段。
 
 ```java
-var prepared = module.prepare(version, callbackBase, callbackSecretReference);
-prepared.synchronizeCredentials(client, "发布前同步模型凭据")
-    .toCompletableFuture().join();
+import dev.sparktide.sdk.UserIdentity;
+import dev.sparktide.sdk.spring.BusinessPrincipalMapper;
+import com.zmd.modules.sys.pojo.vo.SysUserVO;
+import org.springframework.context.annotation.Bean;
+
+@Bean
+BusinessPrincipalMapper sparkTideUserMapping() {
+    return principal -> UserIdentity.of(((SysUserVO) principal).getId(), "safeops-it");
+}
 ```
 
-密钥不进入模型定义、清单、审计或日志。上传要求 HTTPS（本机字面量回环地址可使用 HTTP）。底座 GET 只返回元数据；跨应用、跨 origin、密文篡改和已撤销引用都会拒绝。主密钥轮换时保留旧 key，重新同步后用新 key 加密；全部迁移完成前不能删除旧 key。
+Starter 自动注册 SDK 路径的精确 Origin/CORS、URL 凭据拒绝、原认证捕获、回调重认证和错误响应。默认权限回调在同一原认证主体上调用 Shiro `isPermitted`、Spring Security authorities 或容器角色，不查询业务表、不推断数据范围。Agent/Tool/Knowledge 声明使用业务已有权限名。业务查询继续经原 Service 和数据权限入口，不再复制角色 SQL 或为 AI 单建 scope/read 层。特殊资源授权可以扩展既有 PermissionProvider，但常规接入无需手写它。
 
-带业务回调的生产发布流程：先同步凭据，再显式使用 `deployment.startup: REGISTER` 注册草稿并启动回调/租约，通过 `SparkTideRegistration.release(reason)` 发布，后续正常启动恢复 VERIFY。默认生产 VERIFY 不会自动创建新版本或替你完成首次发布。
+同源默认无需配置来源。跨源部署才在 `sparktide.chat.security.allowed-origins` 声明完整来源，跨域 Cookie 才开启 `allow-credentials` 并沿用原 CSRF。SDK 防止下游全局 CORS 覆盖其响应；普通业务 API 继续原有安全策略。宿主过滤器如果会改写 JSON，可用 `SdkHttpRequest.isManaged(request)` 让 SDK 协议请求保持原文。此标记只由服务端设置，不接受客户端头或 Context，也不授予认证或数据权限。
 
-## 4. 前端一次连接，直接使用完整聊天组件
+SDK 在 MVC 执行前捕获白名单认证头，封装短期加密胶囊；平台在独立私有表绑定运行。工具、知识和业务权限回调经固定本机 Servlet HTTP 桥重新执行原 Spring Security、Shiro 或容器认证，核对主体与期限后才调用业务方法。注销、撤销和过期会拒绝后续回调，已完成幂等结果重放也先认证。取消是协作式的，不能强制终止已经开始的同步业务事务，业务仍需管理自己的事务边界。
 
-先创建稳定客户端，整个已登录会话复用它。以下是业务 Bearer 登录示例：
+认证头白名单与寿命属于 sparktide.authentication，默认 600 秒、上限 3600 秒，不延长原登录。Cookie 写请求复用现有 CSRF token；无该设施时要求同源 Origin 与 SDK 自动添加的 X-Requested-With。原生 Servlet TLS 继续使用标准证书及 localhost 主机名验证；桥不可用时失败关闭。token 不进入普通 context、模型、工具参数、组件 props、事件、历史或日志。
+
+## 5. 前端只创建一个客户端
 
 ```ts
 import {createClient} from '@sparktide/frontend-sdk';
-
 export const ai = createClient({
   baseUrl: '/api/ai',
-  auth: {type: 'bearer', token: () => businessLogin.currentAccessToken()}
+  auth: {
+    type: 'bearer',
+    token: () => loginStore.token,
+    identityKey: () => loginStore.sessionRevision
+  }
 });
 ```
 
-`businessLogin` 是已有登录模块。Cookie 登录可改为 `auth: {type: 'cookie', csrfToken: () => businessLogin.csrfToken()}`，默认 CSRF 头为 `X-CSRF-TOKEN`；后台必须接入现有 CSRF 验证，不可无条件放行。
+loginStore 使用业务原有登录状态。identityKey 是非秘密的主体/租户/登录代次，注销返回 null；仅 token 续期保持不变。SDK 每次请求和 SSE 重连读取最新认证，切换身份清理本地会话、引用和迟到响应。关闭本地连接不取消后台运行。
 
-::: code-group
+Cookie 使用 `auth: {type: 'cookie', csrfToken, identityKey}`；自定义头使用 `auth: {type: 'headers', headers: () => ({token: loginStore.token}), identityKey}`。认证只有 auth 一个入口，普通 context 仅放业务数据。见[前端 SDK](前端SDK.md)。
 
-```tsx [React]
-import {SparkTideProvider, ChatPanel} from '@sparktide/frontend-sdk/react';
-import {ai} from './ai';
+React / Vue 3 的 useChat(options) 和 ChatPanel 使用同一 ChatStore；Vue 2 从独立 `/vue2` 入口使用插件、面板或 createChatMixin。无框架使用 `ai.createChat({agent: 'business-assistant'})`，管理能力从 `/platform` 导入。见[框架接入](React与Vue.md)。
 
-export function App() {
-  return <SparkTideProvider client={ai}>
-    <ChatPanel />
-  </SparkTideProvider>;
+## 6. UI、发布与验收
+
+前端通过 `defineAiComponent` 在一处声明组件名、精确版本、props、Renderer 和 fallback，运行时携带支持的组件版本。后台工具只引用同名同版本，并返回已有业务结果 DTO：
+
+```java
+@Tool(name = "orders.summary", description = "查询订单摘要")
+@RenderWith(value = "business.order-summary", version = "1.1.0", fallback = "请查看文字中的订单摘要。")
+public OrderSummary summary(OrderQuery input) {
+    return orders.summary(input.id()); // 业务已有 DTO 与授权 Service
 }
 ```
 
-```ts [Vue]
-import {createApp} from 'vue';
-import {SparkTidePlugin, ChatPanel} from '@sparktide/frontend-sdk/vue';
-import {ai} from './ai';
+SDK 从工具返回类型生成服务端结果校验合同并注册组件引用，不要求业务在后台再定义 props Schema、UiCatalog Bean 或 ai/ui-catalog.json，也不需要 autoSelectUi=true。前端组件完整声明、后端业务结果类型分别承担渲染和业务数据职责，不手工维护第二套 UI 定义。safeOps 两张卡片与后台 @RenderWith 已统一为 **1.1.0**；已发布的 1.0.0 不覆盖。
 
-createApp(ChatPanel)
-  .use(SparkTidePlugin, {client: ai})
-  .mount('#app');
-```
+`exportComponentCatalog` 仅为可选诊断导出。需要额外的独立 UI 能力时可显式导入 UiCatalog 或使用 autoSelectUi 高级方式；常规“工具结果显示卡片”无需导出、复制 JSON、上传 API 或新增协议。版本不支持/渲染失败按文字 fallback，模型不能发送任意可执行界面代码。
 
-:::
+开发模式显式同步草稿，生产只核验已发布定义；发布作业独立执行。当前 -6 候选本地完整构建 542 项：517 通过、25 条件跳过、0 失败，12 模块隔离安装通过；包括 Boot2 原生 Java8 53/53、Boot4 Starter 68 项中 1 项既有条件跳过、真实 Servlet HTTP 与 Spring/Shiro 协程。前端本地 95 项及 React/Vue3/Vue2 样例通过，本轮 safeOps 前端固定包消费的 24 项与 Vue2/Webpack4 构建通过。safeOps 原生 Java8 消费者 clean/package 24/24 通过，所有 SDK 依赖为 -6，最终 Jar 不含 ui-catalog.json；前轮认证链路证据保留，不作为本轮 1.2.1 重测结论。
 
-ChatPanel 已包含消息、会话、发送/停止、危险操作批准/拒绝、引用预览和业务组件渲染。未指定助手时使用应用默认入口；选择其他助手可以直接写 `agent: 'refund'`，SDK 先通过业务后台按当前用户权限解析入口，再发送精确版本。也可使用 `agent: {id: 'refund', version: '1.0.0'}` 固定版本。默认助手保留应用绑定版本，其他助手解析为最高已发布版本；无权限时不会回退默认助手。模型选择目录仍在后续实施范围。
+safeOps 本轮接入源码从 33 个 Java 文件、3197 行收敛到 6 个文件、408 行，计入新增公共业务代码的保守全接入口径仍净减至少 2073 行：Assistant、Provider、Model、Tools、Knowledge 和必要工具输入。已删除手工 Origin、AI 配置以及专属 scope/read/permission/web；工具直接调用 `ProjectInfoService`、`ProjectProgressService`、`WarnService` 和 `SafetyCheckService`。缺少的业务摘要补进这些公共服务，继续使用原 MyBatis 数据权限，并修正原权限入口的确定缺陷；不是把旧 AI 查询层整体搬到 SDK。
 
-需要跨发布重试时，可先保存 `const agent = await ai.agents.resolve('refund')`，再调用 `ai.chat.run({message: '查询退款', agent, idempotencyKey})`。以名称和相同幂等键重试若恰好解析到新版本，底座可能返回冲突；不要自动换键，以免重复执行业务操作。
+后端 -6 / 业务声明 1.2.1 / UI 1.1.0 的真实浏览器进度、预警、知识三场景均成功，23 项运行检查全部通过，6 次模型调用共 12483 Tokens。两张业务卡片各渲染一次，数据按原企业 AND 项目范围独立 SQL 核对；知识核验及 1.2.1 来源预览通过。原生认证专项 32/32、六工具真实 HTTP/数据库 10 项检查也通过。
 
-退出或切换用户时调用 `ai.reset()`，清空本地身份相关状态并中断旧请求；它不会取消后台已提交任务。
+浏览器 UI 20/20 通过，reload 后三类历史、卡片、核验和 1.2.1 预览恢复；原退出、back/reload 均保持登录页。专用测试夹具已 CAS 还原，新增 Run 恰 3 个，后续读取/改名/注销无额外模型调用。本轮本机候选验收完成。前轮 -4/1.1.1 的模型及历史证据保留原批次，-5 的长知识超时/503 不改写成成功；Go HTTP 402 不借 DeepSeek 结果标为通过。见[本轮范围](../产品支持/版本说明.md#基础设施下沉与业务服务复用)。
 
-### 自定义布局，无需重写状态管理
-
-```tsx
-import {useChat, MessageList, ChatInput} from '@sparktide/frontend-sdk/react';
-
-export function MyChat() {
-  const chat = useChat();
-  return <section>
-    <MessageList messages={chat.messages} onCitation={chat.previewCitation} />
-    <ChatInput chat={chat} />
-    {chat.error && <p role="alert">{chat.error.message}</p>}
-  </section>;
-}
-```
-
-需要危险操作、会话目录或引用详情的自定义页面也应展示对应状态和动作；完整界面可直接使用 ChatPanel。Vue useChat 返回同名 refs/computed，可在模板解包；JS/TS 无框架接入使用 `createChat(ai, options)`，挂载时 `start()`，卸载时 `dispose()`。
-
-| 状态或动作 | 开发者使用方式 |
-| --- | --- |
-| input、canSend、sending | 输入草稿、可发送、HTTP 提交状态 |
-| messages | 历史与当前消息，含文本、工具、组件、引用 parts |
-| run、status、connection | 区分业务运行状态与网络连接状态 |
-| pendingApprovals | 展示待确认操作，调用 approve(id) 或 reject(id) |
-| send() / send(text) | 发送草稿 / 发送指定文本，界面动作返回 void |
-| stop() / reconnect() | 取消任务 / 恢复既有任务事件流 |
-| refresh(true) | 加载下一页会话 |
-| selectConversation(id) / newConversation() | 选择历史 / 开始新的本地视图 |
-| renameConversation(title) / deleteConversation() | 修改或删除当前会话 |
-| previewCitation(id) | 经服务端重新授权后展示引用片段 |
-
-发送失败保留草稿；用户在提交期间输入的新草稿也会保留。重连不会重发聊天。组件卸载关闭观察，不自动取消业务任务。需要等待业务结果时使用下面的任务 API，不要等待界面 send()。
-
-### 在业务流程中等待结果
-
-```ts
-const task = await ai.chat.run({message: '查询订单进度'});
-const off = task.on('textDelta', text => console.log(text));
-try {
-  const run = await task.completed();
-  if (run.status === 'SUCCEEDED') {
-    console.log(task.getState().text);
-  }
-} finally {
-  off();
-}
-```
-
-`completed()` 会等待终态；FAILED、CANCELLED、TIMED_OUT 也是终态，要检查 status。连接错误会拒绝 Promise；重新等待只恢复同一任务，不重新提交。工具需要确认时，应由界面展示详情后调用 `task.approve(id)` 或 `task.reject(id)`。
-
-## 5. 业务组件如何被选择
-
-前端组件声明名称、精确版本、能力描述、props Schema 和文本 fallback，导出 UiCatalog 供后台模块导入。后台助手启用 `autoSelectUi()`（Kotlin `ui { autoSelect() }`）后，模型可以从已授权且当前客户端支持的组件中选择，无需每个工具都写 RenderWith。
-
-`@RenderWith` 保留用于确定性映射，例如订单查询结果固定显示订单卡片。整个经 Schema 验证的工具输出作为 props；客户端不支持该版本或渲染失败时显示 fallback。两种机制可以共存；模型不能发送任意可执行前端代码。
-
-## 实施边界与下一步
-
-已完成模块化模型/助手/知识声明、方法工具与知识适配、组件契约与自主/固定渲染、完整前端状态、可信登录委托和统一配置。模型环境密钥托管已实现；当前仍需完成附件、模型/入口目录、完整独立安装示例和新版正式发行。底座与 SDK 的本地测试不代表真实模型厂商或生产部署验收。
-
-学习现有业务规则可继续阅读[业务工具](../使用指南/业务工具.md)、[知识库](../使用指南/知识库.md)、[界面组件](../使用指南/界面组件.md)。这些页面中的旧版本 API 仍属于公开 0.1.0；新版完整教程迁移将与已验证源码同步推进。
+迁移时成套更新双 SDK 和平台，移除业务手写 Provider HTTP/SSE、注册图、回调服务、createChatClient 与旧 hook overload。恢复旧构件也需配套，不混用两代状态 API，不重放未知工具副作用。

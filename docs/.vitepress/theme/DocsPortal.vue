@@ -2,14 +2,14 @@
 import { withBase } from 'vitepress'
 const url = (path: string) => withBase(path + '.html')
 const entries = [
-  {title:'接入应用',description:'创建应用，接入后端与前端 SDK，配置业务身份和能力。',link:'/教程/README',action:'查看接入指南'},
+  {title:'接入应用',description:'注解声明业务能力，复用现有认证，接入双 SDK 开发候选。',link:'/开发接入/SDK简化接入',action:'查看接入指南'},
   {title:'管理平台',description:'管理应用，维护参数配置，查询运行记录和告警。',link:'/使用指南/控制台/README',action:'查看控制台手册'},
   {title:'部署与运维',description:'部署服务、配置网关与数据库，执行升级、备份与故障排查。',link:'/部署运维/README',action:'查看运维指南'}
 ]
 const steps = [
-  {title:'准备环境',link:'/教程/准备环境'}, {title:'创建应用',link:'/教程/创建应用'},
-  {title:'接入后端',link:'/教程/接入后台'}, {title:'接入前端',link:'/教程/接入前端'},
-  {title:'验证运行',link:'/教程/验证对话'}, {title:'上线配置',link:'/教程/接入生产'}
+  {title:'确认版本',link:'/开始使用/版本与获取'}, {title:'声明后台',link:'/开发接入/SDK简化接入'},
+  {title:'复用业务认证',link:'/开发接入/业务后台SDK'}, {title:'创建客户端',link:'/开发接入/前端SDK'},
+  {title:'嵌入聊天页面',link:'/开发接入/React与Vue'}, {title:'联合验收',link:'/开发接入/接入流程'}
 ]
 const capabilities = [
   {title:'模型与调用配置',detail:'模型服务、应用授权、候选策略和用量',link:'/使用指南/模型接入'},
@@ -21,7 +21,7 @@ const capabilities = [
 ]
 const references = [
   {title:'Java / Kotlin SDK',link:'/开发接入/业务后台SDK'}, {title:'JS / TS SDK',link:'/开发接入/前端SDK'},
-  {title:'React / Vue',link:'/开发接入/React与Vue'}, {title:'HTTP API',link:'/接口参考/README'},
+  {title:'React / Vue3 / Vue2',link:'/开发接入/React与Vue'}, {title:'HTTP API',link:'/接口参考/README'},
   {title:'事件协议',link:'/接口参考/事件协议'}, {title:'环境变量',link:'/部署运维/环境变量'}
 ]
 </script>
@@ -44,9 +44,9 @@ const references = [
       </a>
     </section>
     <section class="portal-path" aria-labelledby="path-heading">
-      <div class="portal-section-heading"><h2 id="path-heading">应用接入流程</h2><a :href="url('/教程/README')">完整指南</a></div>
+      <div class="portal-section-heading"><h2 id="path-heading">应用接入流程</h2><a :href="url('/开发接入/SDK简化接入')">新版指南</a></div>
       <ol><li v-for="(step,index) in steps" :key="step.title"><a :href="url(step.link)"><span>{{ String(index+1).padStart(2,'0') }}</span>{{ step.title }}</a></li></ol>
-      <p>先创建应用，再接入 SDK。日常在控制台选择应用，维护配置并排查运行问题。</p>
+      <p>新版 API 使用内部开发候选，尚未公开发行；公开 0.1.0 下载示例在固定版本教程中保留，不与新 API 混用。</p>
     </section>
     <div class="portal-columns">
       <section aria-labelledby="capabilities-heading">

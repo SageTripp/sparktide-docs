@@ -1,6 +1,6 @@
 # SparkTide · 启澜产品文档
 
-面向开发者的产品文档：初识 → 连续教程 → 能力专题 → SDK / HTTP 参考 → 部署与治理。常规接入优先双 SDK，管理平台是辅助入口。
+面向开发者的产品文档：初识 → 新版 SDK 接入 → 能力专题 → SDK / HTTP 参考 → 部署与治理。公开 0.1.0 连续教程作为固定制品路线单独保留。常规接入优先双 SDK，管理平台是辅助入口。
 
 ## 阅读与目录
 
@@ -8,7 +8,7 @@
 
 代码标签按四类分别联动：Java / Kotlin、React / Vue、npm / pnpm / Yarn、Gradle Kotlin DSL / Gradle Groovy DSL / Maven。选择会同步本页同类标签，并在站内导航及刷新后恢复；不含所选项的代码组保留原选择。浏览器禁止本地存储时仍支持同页及站内导航联动。新增示例继续使用原生 `code-group` 和这些标签名称即可；其他文件名或标签保持独立。实现来源：`docs/.vitepress/theme/useSyncedCodeGroups.ts`，更新日期：2026-10-09。
 
-[SDK 简化接入（开发版）](docs/开发接入/SDK简化接入.md) 展示新的单助手声明及 React/Vue useChat，明确区分本地实现与公开 0.1.0。2026-10-09 根路径与 /SparkTide/ 子路径均完成构建及检查：110 个 HTML、11140 个本地链接/资源/锚点通过。预览服务在重新构建后可能保留旧 HTML，需要重启相应预览进程再检查新资源。
+[新版 SDK 接入（内部开发候选）](docs/开发接入/SDK简化接入.md) 展示 Provider/Model/Agent 类型化声明、现有业务认证私有传递、createClient 和 React/Vue3/Vue2 统一状态，明确区分候选源码与公开 0.1.0。2026-10-09 根路径与 /SparkTide/ 子路径均完成构建及检查：110 个 HTML、11140 个本地链接/资源/锚点通过。预览服务在重新构建后可能保留旧 HTML，需要重启相应预览进程再检查新资源。
 
 | 领域 | 内容 |
 | --- | --- |
@@ -49,7 +49,31 @@ npm run docs:check
 
 平台权威来源为 protocol/src/main/resources/openapi.json 与 agent-event.schema.json。更新时按字节同步到 docs/public/downloads，再执行 npm run docs:api。该命令生成四个 API 分组和数据结构页，其余用户教程人工维护。不要只修改生成页而漏改契约。
 
+## 2026-10-23 通用基建下沉增量
+
+状态：接入文档和本机候选验收记录已同步；SDK -6/1.2.1 尚未公开发行。来源：SDK Starter Kotlin 源码、平台本轮 ADR、safeOps 公共 Service 与前端 session。责任人：SparkTide 维护者。
+
+当前指南使用后台候选 **0.1.1-auth.20261023-6**，12 模块已统一安装到隔离本机 Maven 文件仓库；-6 完整 clean build 为 542 项中 517 通过、25 条件跳过、0 失败。SDK 自动装配 Origin/CORS、query 凭据保护、原主体/功能权限适配及错误协议，业务仅按需提供 BusinessPrincipalMapper。safeOps AI 接入目录由 33 文件/3197 行降为 6 文件/408 行，工具调用原公共业务 Service，原 Shiro/数据权限继续生效。前端入口直接 agents.resolve、项目筛选调用公共 options API，24 项与生产构建通过，前端 SDK 包无变化。
+
+卡片只在前端声明 props/Renderer，后台 @RenderWith 与业务 DTO 自动生成服务端结果校验合同，不要求导出或复制 ui-catalog.json；safeOps 两组件及映射统一为 1.1.0。-6 已修复原权限拒绝的 401/403 分类，未知业务异常保持 503；safeOps 原生 Java8 消费者 clean/package 24/24 通过，SDK 依赖统一为 -6，最终 Jar 不含 ui-catalog.json；最终浏览器三场景、23 项运行检查和原认证 32/32 已通过，浏览器 UI 20/20、完整恢复/退出与测试夹具还原均通过，本轮本机隔离候选验收完成。
+
+本轮真实浏览器三场景均成功，6 次模型调用共 12483 Tokens，知识核验与精确来源预览通过；六工具真实 HTTP/数据库 10 项检查通过。浏览器 UI 20/20、历史/退出和夹具还原通过；53=50+3，后续 GET/改名/注销无额外 Run。新增公共业务代码也计入后的保守净减少为 2073 行。下方 -4/1.1.1 记录保留原批次，不挪作本轮证据。24 项消费者验证不代表原业务全项目测试，7 项 DynamicDataSourceTest 缺驱动未通过；25 项 SDK 条件跳过、Grok 超时和 Go 402 仍单列。公开固定版本、ZIP/Maven/示例未改。当前范围见[版本说明](docs/产品支持/版本说明.md#基础设施下沉与业务服务复用)。本轮文档根路径与 /SparkTide/ 均构建检查通过：110 个 HTML、11344 个本地链接/资源/锚点、26 个旧跳转；最后恢复根路径。跨仓契约守卫通过，5 份公开契约逐字节一致，OpenAPI 700621 字节。最终日志为本仓 .work-docs-final6-* 和隔离 round2/final6/reports/docs-contract-guard.log。
+
+## 2026-10-23 新版 SDK 指南与固定版本边界
+
+状态：文档同步与本地静态验收完成，未发布。来源：双 SDK 当前声明/认证/状态 API、内部候选和构建日志。责任人：SparkTide 维护者。
+
+首页、导航、阅读地图和 SDK 索引优先指向类型化注解与现有业务认证接入；Provider/Model 配置归属、API Key 来源、模型类型引用、自定义适配器、原认证链重入以及 React/Vue3/Vue2 统一状态均已同步。后台候选为 0.1.1-auth.20261023-4，完整构建 525 项（500 通过、25 条件跳过），12 模块统一生成内部制品。增加 DeepSeek 独立适配器、DeepSeekProvider.Model 示例、ModelOptions 归属及默认非思考协议说明。本轮 Go 请求为厂商 HTTP 402，未宣称成功实网对话，也未把构建或认证链路测试称作浏览器/生产验收。
+
+八篇连续教程显式标为公开 0.1.0 固定制品路线。examples、公开 Maven、固定版本下载 ZIP 保持原样；docs/public 唯一变化是按字节同步当前未版本化 openapi.json，不表示重新发行旧固定包。教程 ZIP SHA256 为 F92D86CF671710EEEFCEF4CD4710B3D872C74CE7339A5181E0525820262B8885。没有重新打包或覆盖固定发行附件，也没有为候选虚构下载 URL。当前 OpenAPI SHA256 为 EE17F0A4C18BBB5CB411A5DE16DF2B4D42016E15A1F398AACC93212B0641D129；已运行 docs:api 生成 137 个操作、198 个数据结构，生成器支持本地参数引用，business-auth 私有三头不会显示为 undefined。
+
+官方 DeepSeek deepseek-flash 在 safeOps 后台 -4 / 智能体 1.1.1 上的进度、预警、知识规则三场景均成功、全部断言通过、零跳过；原始业务认证、真实 SQL、卡片、知识引用/核验/预览、历史、有序 SSE 与事件无认证材料均进入验收。早期异步流权限拒绝与修后平台 455 JUnit / 86 JavaScript 回归分别保留；Pi 官方 DeepSeek 并行审查也已完成并复核。详见[本轮验证范围与诊断记录](docs/产品支持/版本说明.md#本轮验证范围)，不把 Go 的 402 记为成功。
+
+验证：npm ci 成功；根路径与 /SparkTide/ 均执行 docs:build 和 docs:check，通过 **110 个 HTML、11335 个本地链接/资源/锚点**，生成 26 个旧地址跳转；最后恢复根路径构建。公开指南中的 API 依据 SDK 源码与其已有样例测试核对，本站未另将所有说明性片段作为独立应用编译。独立受控模型 fixture 的 9 项业务 HTTP 结果属于前置 885AB33C 包，作为历史保留；当前 -history-auth 候选已实际重装，95 项 SDK 回归、三框架类型、safeOps 23 项与生产构建通过，另有本机 HTTP 四场景通过（12 个 GET，无业务登录/数据库/模型）。真实浏览器失败历史 7 项检查通过；1687152E 前置包的真实模型浏览器三场景均成功，最终包 GET/退出复验 9 项通过，历史/来源/中文提示及退出清空正常，无新增 Run 或模型调用。日志为本仓 ignored 的 .work-docs-*.log。依赖安装仍报告 4 项已有构建依赖审计，未在文档任务中自动升级。
+
 ## GitHub Pages 发布
+
+2026-10-23 本次发布范围为文档站、SDK 接入说明及当前 HTTP 契约参考。按 codex/docs → dev → release/0.1 → master 推进已验证文档，再手动触发 deploy.yml；不公开新的 SDK/底座二进制，不覆盖固定 0.1.0 附件。
 
 正式文档域名为 `sparktide.stdev.fun`。DNS 使用 CNAME：主机记录 `sparktide`，记录值 `sagetripp.github.io`，TTL 600；记录值不包含协议或仓库路径。GitHub Pages 的 Custom domain 设置为同一域名，HTTPS 证书由 GitHub 签发。
 

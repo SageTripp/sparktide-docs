@@ -1,200 +1,109 @@
 ---
 title: "业务后台 SDK（Java / Kotlin）"
-productVersion: "0.1"
-updated: "2026-10-09"
-status: 已确认
-owner: SparkTide 维护者
-source: 平台与 SDK 实现
-topic: "SDK 参考"
-docGoal: "查 JVM 安装、Spring 配置、声明与标准 HTTP API；动手操作先走教程。"
+productVersion: "开发候选 0.1.1-auth.20261023-6"
+updated: "2026-10-23"
+status: "本地完整构建通过，公共发行另记"
+owner: "SparkTide 维护者"
+source: "Kotlin 共享核心、两类 Starter、独立模型适配器与认证桥"
 ---
 
 # 业务后台 SDK（Java / Kotlin）
 
-业务后台 SDK 支持 Java、Kotlin 和 Spring。它把业务工具、知识和权限接入底座，也为前端提供标准聊天 HTTP API；会话存储和模型执行留在底座。Java 核心要求 JDK 17，不依赖 Kotlin 或 Spring；Kotlin 模块复用核心，源码使用 Kotlin 2.3.20。本文共用同一接入流程，差异示例按 Java / Kotlin 标签切换。
+常规接入使用[类型化注解教程](SDK简化接入.md)：@AiProvider 管连接/密钥，@AiModel 管模型行为，@Agent 用类数组关联模型、工具和知识。SDK 实现语言为 Kotlin，Java 使用者直接调用公开 API，无需迁移业务语言。
 
 ## 安装
 
-直接使用公开 Maven 仓库 `https://sagetripp.github.io/sparktide-docs/maven/`，无需克隆 SDK 源码或安装到 Maven Local。下面按业务工程的构建工具选择安装方式；Gradle Kotlin DSL 也可用于 Java 项目。
+以下候选只在内部制品仓库提供，**尚未在公开 Maven 地址发行**。公开 0.1.0 属于[旧固定版本教程](../教程/README.md)，不能混用本页 API。
 
-| 使用场景 | 制品 |
+| 场景 | 坐标（group 为 dev.sparktide） |
 | --- | --- |
-| 纯 Java / JVM 核心 | `dev.sparktide:sdk-java:0.1.0` |
-| Kotlin 语言扩展 | `dev.sparktide:sdk-kotlin:0.1.0`（包含 Java 核心依赖） |
-| Spring 标准 HTTP API / 能力注册 | `dev.sparktide:sdk-spring-boot-starter:0.1.0`；宿主提供 Spring MVC Web 运行时 |
+| Java 17 核心 | sdk-java:0.1.1-auth.20261023-6 |
+| Java 8 核心 | sdk-java8:0.1.1-auth.20261023-6 |
+| Java 17 / Boot 4.0.8 | sdk-spring-boot-starter:0.1.1-auth.20261023-6 |
+| Java 8 / Boot 2.6.6 | sdk-spring-boot2-starter:0.1.1-auth.20261023-6 |
+| Kotlin 协程/DSL | sdk-kotlin，与 Java 17 核心配套 |
+| 模型适配器 | sdk-model-deepseek / sdk-model-opencode-go / sdk-model-openai / sdk-model-openai-compatible / sdk-model-ollama，同候选版本 |
 
-下面以 Spring 接入为例；纯 JVM 项目改用表中的核心或 Kotlin 制品。Spring Kotlin 项目同时添加 Kotlin 模块。
+Boot 2 Maven 工程添加依赖前由维护者提供内部仓库地址；不要把个人机器的文件路径当成公共安装地址。
 
-::: code-group
-
-```kotlin [Gradle Kotlin DSL]
-repositories {
-    mavenCentral()
-    maven { url = uri("https://sagetripp.github.io/sparktide-docs/maven/") }
-}
-dependencies {
-    implementation("dev.sparktide:sdk-spring-boot-starter:0.1.0")
-    // Kotlin 项目另加：implementation("dev.sparktide:sdk-kotlin:0.1.0")
-    // 宿主 Spring Boot BOM 管理 Web 运行时版本
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
-}
-```
-
-```groovy [Gradle Groovy DSL]
-repositories {
-    mavenCentral()
-    maven { url = uri("https://sagetripp.github.io/sparktide-docs/maven/") }
-}
-dependencies {
-    implementation 'dev.sparktide:sdk-spring-boot-starter:0.1.0'
-    // Kotlin 项目另加：implementation 'dev.sparktide:sdk-kotlin:0.1.0'
-    // 宿主 Spring Boot BOM 管理 Web 运行时版本
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-}
-```
-
-```xml [Maven]
-<!-- 宿主 Spring Boot BOM 管理 Web 运行时版本 -->
-<repositories>
-  <repository>
-    <id>sparktide-public</id>
-    <url>https://sagetripp.github.io/sparktide-docs/maven/</url>
-  </repository>
-</repositories>
+```xml
+<properties>
+  <sparktide.sdk.version>0.1.1-auth.20261023-6</sparktide.sdk.version>
+  <kotlin.version>2.3.20</kotlin.version>
+</properties>
 <dependencies>
   <dependency>
     <groupId>dev.sparktide</groupId>
-    <artifactId>sdk-spring-boot-starter</artifactId>
-    <version>0.1.0</version>
+    <artifactId>sdk-spring-boot2-starter</artifactId>
+    <version>${sparktide.sdk.version}</version>
   </dependency>
-  <!-- Kotlin 项目另加 sdk-kotlin，版本同上 -->
   <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-webmvc</artifactId>
+    <groupId>dev.sparktide</groupId>
+    <artifactId>sdk-model-opencode-go</artifactId>
+    <version>${sparktide.sdk.version}</version>
   </dependency>
 </dependencies>
 ```
 
-:::
+Boot 2 父 BOM 会管理 Kotlin 依赖版本，需检查依赖树确实对齐 stdlib、reflect 与 jdk7/jdk8 拆分包。SDK 本身已验证原生 Java 8 字节码与消费；业务仍需运行验证。同一业务应用只选择一套 Java 核心，不同时依赖两个 Starter。
 
-## 接入边界
+## 选择模型适配器
 
+只添加实际使用的依赖；以下模块均为同轮内部候选，不表示新的公共发行。模型父类选协议，`@AiModel.provider` 选已有配置的 Provider 子类。
 
-浏览器只访问业务后台。Java 核心提供 BusinessChatClient；Kotlin 复用核心并提供模型声明函数；Spring Starter 装配 HTTP API。会话、消息、运行和事件保存于底座，业务后台只适配认证、调用和流转发。工具、知识、业务权限和声明配置仍通过业务后台接入。
+| 模块 | 模型声明父类 | 适用协议 |
+| --- | --- | --- |
+| sdk-model-deepseek | DeepSeekProvider.Model | DeepSeek 官方 Chat Completions |
+| sdk-model-opencode-go | OpenCodeGoProvider.Model | OpenCode Go 的模型服务 |
+| sdk-model-openai | OpenAIProvider.Model | OpenAI |
+| sdk-model-openai-compatible | OpenAICompatibleProvider.Model | OpenAI 兼容 Chat Completions |
+| sdk-model-ollama | OllamaProvider.Model | Ollama |
 
-## 接入与认证
+DeepSeek 接入将上例的适配器依赖改为 `sdk-model-deepseek`，分别声明连接和模型：
 
-引入 `dev.sparktide:sdk-spring-boot-starter:0.1.0`，业务项目提供 Servlet Web 运行时；核心不依赖 Spring。配置：
+```java
+import dev.sparktide.sdk.annotation.AiProvider;
+import dev.sparktide.sdk.annotation.AiModel;
+import dev.sparktide.sdk.provider.DeepSeekProvider;
 
-```yaml
-sparktide:
-  chat:
-    enabled: true                 # 默认 false
-    platform-url: https://platform.internal
-    app-id: orders
-    path: /api/ai                  # 默认值；无末尾斜杠
-    max-streams: 32                # 1..256，每个实例
-    stream-timeout-ms: 650000      # 1000..900000
+// 两个 public 类分别放入同名文件；地址默认使用 https://api.deepseek.com。
+@AiProvider(apiKey = "${business.ai.deepseek.api-key}")
+public class BusinessDeepSeekProvider extends DeepSeekProvider {}
+
+@AiModel(model = "deepseek-flash", provider = BusinessDeepSeekProvider.class)
+public class BusinessDeepSeekModel extends DeepSeekProvider.Model {}
 ```
 
-::: code-group
+API Key、连接地址和 HTTP 超时属于 Provider。`DeepSeekModelOptions(thinking=false)` 属于 Model，默认关闭思考；当前平台不保留跨轮 `reasoning_content`，显式启用思考会在创建适配器时返回 `UNSUPPORTED`，不先发送请求。SDK 将平台输出上限转换为 `max_tokens` 并发送 `thinking: {type: "disabled"}`，业务不需要实现请求体转换。自定义 Provider 可以继承预设覆盖连接或密钥来源；如需改变协议行为，使用自定义适配器 SPI。
 
-```java [Java]
-@Bean ChatCredentialResolver identity(UserCredentialProvider<String> enrolledUsers) {
-    return request -> {
-        var principal = request.getUserPrincipal();
-        if (principal == null) throw new PlatformException(401, "UNAUTHENTICATED", "Login required");
-        return enrolledUsers.credentialFor(principal.getName());
-    };
-}
-```
+## 配置与身份
 
-```kotlin [Kotlin]
-@Bean
-fun identity(enrolledUsers: UserCredentialProvider<String>): ChatCredentialResolver =
-    ChatCredentialResolver { request ->
-        val principal = request.userPrincipal
-            ?: throw PlatformException(401, "UNAUTHENTICATED", "Login required")
-        enrolledUsers.credentialFor(principal.name)
-    }
-```
+连接 YAML 只描述平台地址、应用/回调凭据、回调 URL 及部署信息，模型和智能体不写入 YAML。完整最小示例见[连接平台](SDK简化接入.md#_4-连接平台并复用现有登录)。
 
-:::
+SDK 提供标准 /api/ai 路由、注册图、模型/工具/知识回调与租约。原认证已产生 Principal 时，默认使用其 name 作为无租户业务用户；自定义用户对象或租户仅在原安全配置提供 `BusinessPrincipalMapper` 字段映射，直接复用原框架已认证对象。不要求开发者手写 Filter、Verifier、路由、登录、委托缓存、回调服务、UiCatalog Bean 或权限协议 Provider。
 
-`UserCredentialProvider` 实际方法为 `credentialFor`，用户凭据由受控初始化/OIDC 体系提供。不要将用户名请求头视为已登录身份。网关每次验证平台 `/v1/me` 的 USER 角色与绑定应用；底座再次验证租户、会话所有者和实时权限。HTTP 模块独立于 `sparktide.enabled` 注册开关，不要求网关注入管理凭据。启用但没有 resolver 时启动失败。
+认证信息使用与普通 context 分开的私有通道。工具通过 context.authentication().token() 或 header(name) 读取本次原认证；回调重新经过业务原认证过滤器，再调用原服务判断权限。访问器随执行结束失效，不可保存认证值。平台只持有短期加密胶囊和可信运行关联，模型、消息、历史、事件和 UI 不接收认证材料。
 
-Bearer 登录需要业务认证验证后解析用户凭据。Cookie 登录另提供 `ChatRequestVerifier`，接入原有 Spring Security CSRF 或登录态绑定的 CSRF token；默认 verifier 拒绝带 Cookie 的写请求，返回 `403 CSRF_REQUIRED`。业务实现应限制允许的 Origin/CORS，不允许凭浏览器 Context 或 appId 提权。
+Cookie 写请求复用业务现有 CSRF；没有该设施时要求同源 Origin 与 SDK 自动请求保护头。胶囊默认 600 秒，上限 3600 秒，原业务 token 过期或撤销更早生效。本机桥使用私有 HTTP 客户端，不继承进程全局 Cookie/Authenticator、不重定向、不重试；主 Servlet 原生 TLS 必须通过标准证书/localhost 主机名校验。
 
-## HTTP 与方法
+## 自动基础设施与业务边界
 
-前缀可以修改，下列路径相对 `/api/ai`。机器合同以平台 `protocol/src/main/resources/business-chat.openapi.json` 为准。
+Starter 内置原 Shiro/Spring Security/Servlet 认证与功能权限适配，精确校验同一 app/user/tenant 后调用原框架权限。数据权限不搬入 SDK，业务工具必须调用已有 Service 的授权入口；权限名也复用原体系。需要参数级资源决策时可覆盖 PermissionProvider，不能以普通 Context 或客户端 appId 提供可信身份。
 
-| 请求 | 行为 |
-| --- | --- |
-| `POST /chat` | 发送 `{protocolVersion:"1.0",message:{role:"user",content}}`，可选 conversationId、agentId+agentVersion、context、client.uiCapabilities；返回 Run |
-| `POST /conversations` | `{title?:string}`，标题默认空、最长128，201返回空会话；无需先创建才能发送 |
-| `GET /conversations` | limit 默认20，1..200；offset 默认0，0..1000000；items+nextOffset，null表示末页 |
-| `GET/PATCH/DELETE /conversations/{id}` | 历史最多20条；PATCH仅title；DELETE活动运行冲突409 |
-| `GET /runs/{id}` | 读取权威状态 |
-| `GET /runs/{id}/events` | SSE，Last-Event-ID=`runId:sequence`，保持原事件协议1.0 |
-| `POST /runs/{id}/cancel` | 显式取消，不撤销已产生的业务副作用 |
-| `POST /runs/{id}/confirm` | confirmationId+decision（approve/reject）；只有DANGEROUS工具等待确认 |
-| `GET /runs/{id}/citations/{citation}/preview` | 按当前权限读取引用原文 |
+同源默认允许，跨源才配置 `sparktide.chat.security.allowed-origins` 的完整 http/https origin，拒绝通配符、null、路径或 query。`allow-credentials` 默认 false，显式跨域 Cookie 不替代 CSRF。SDK 路由拒绝 URL 凭据，自动防止下游全局 CORS 覆盖安全响应；原认证提前结束的 HTTP 200 错误会规范为 SDK 失败响应，正常 SSE 不等待缓冲。
 
-写请求不自动重试。POST chat 的 Idempotency-Key 默认生成 UUID，最长128；用户可传入稳定键恢复提交结果不明场景。非法游标400，超出底座保留窗口或序号范围410。401/403要求恢复登录，不反复重连。HTTP开始前错误以JSON返回；开始后的错误通过断流和Run状态查询恢复。请求体上限256KiB（含分块输入）；流每行64Ki字符、每帧256Ki字符，实例流名额用尽返回429。慢消费者只占一个有界工作线程，不会排队积累无限事件。订阅结束、超时或断开会关闭上游，不自动取消运行。
+宿主 XSS/正文过滤器可用 `SdkHttpRequest.isManaged(request)` 保持 SDK 校验过的 JSON/SSE 原文。标记由服务端设置，只对 SDK 自有路径生效，不是免认证或扩大数据权限的依据。safeOps 只在原 ShiroConfig 增加主体字段映射、原 XssFilter 增加这一判断，没有再建 AI 认证设施。
 
-## 声明与发布
+## UI、权限与扩展
 
-`ApplicationBootstrap.create(appId,name)` 仅由独立初始化命令使用平台管理员凭据；重复创建由平台明确拒绝。发布/注册使用应用管理凭据，聊天使用 USER，回调使用绑定应用及出站 Origin 的独立密钥。密钥值由执行侧环境注入，声明仅包含 secretRef。
+@Agent.permissions 声明入口所需业务权限，原服务继续判定数据权限。常规卡片只写 @RenderWith 组件名/精确版本并返回已有业务 DTO，SDK 根据输出类型生成结果校验合同；前端一处声明 props/Renderer，不要求导出并复制 ai/ui-catalog.json、不需要 UiCatalog Bean、autoSelectUi 或手写 AiModule。显式目录导入仅保留为额外独立 UI 能力的高级选项。工具/知识是现有业务 Bean，模型/Provider 默认可公开无参构造，也支持从容器取得。
 
-`ModelDeclarations` 提供 OPENAI_CHAT/REMOTE 提供商、模型与显式 ModelCapabilities、应用私有绑定、ModelProfile、提示词及工具/知识引用的智能体工厂；Kotlin 的 openAIProvider/modelDefinition/modelBinding/modelProfile/agentDefinition 语义等价。Registry现有提供商不接受单独连接超时字段：连接上限复用平台部署限制，单次模型超时通过 ModelProfile.attemptTimeoutSeconds 设置。
+供应商的连接/账户选项属于 ProviderOptions，推理选项属于 ModelOptions。自定义适配器实现 sdk-model-spi 的 ModelAdapterFactory / ModelAdapter；工厂分别接收 ProviderSettings、ModelSettings 和 SDK 的可信辅助服务。保留低层客户端用于管理/特殊集成，不把手工注册图作为常规接入步骤。
 
-Spring 可提供 `RegistrationManifest` Bean，无需手写JSON；Starter合并模型声明和注解工具/知识。设 `sparktide.deployment.source` 为稳定标识（小写字母开头、字母数字横线、最长64），清单归属必须一致。相同版本内容不可被无痕覆盖；内容变化发布新语义版本。源不同或试图认领旧人工资源返回409；REVOKED不可被同步恢复。
+## 生命周期、发布与验证
 
-开发显式 `mode: DEVELOPMENT` + `auto-sync: true`，预检通过后原子发布。生产默认 PRODUCTION、auto-sync=false，启动仅注册/检查，禁止旧publish=true隐式发布。发布程序先读取 `SparkTideRegistration.registrationReport()`，再显式调用 `release(reason)`；不对浏览器暴露此方法。Java独立程序用 `DeclaredApplication.inspect()` 和 `publish(reason)`。同内容重复启动及并发发布查询最终权威状态后返回UNCHANGED；不重发写请求。代码删除清单条目不自动删除历史版本，停用需显式治理。
+开发环境显式同步草稿；生产只验证现有发布定义。受控发布使用 SparkTideRegistration.release(reason)，不能由聊天触发隐式发布。工具写操作不自动重试，保留持久幂等账本和未知结果核对。同步业务事务只支持协作式取消，不能宣称强制终止已开始的业务操作。
 
-## 迁移与回滚
+-6 候选完整 clean build：542 项，517 通过、25 条件跳过、0 失败，12 模块隔离 Maven 安装通过；其中 Boot2 原生 Java8 53/53，Boot4 Starter 68 项中 1 项既有条件跳过。包含 Java 8/17、真实 Servlet HTTP、协程隔离与 DeepSeek 协议行为。本地测试不等同于供应商实网或业务生产验收，实际业务验证单独记录。回滚成套恢复匹配平台与两个 SDK，不把 token 降级到普通 context。
 
-保留 PlatformClient、AgentClient 和旧首消息建会话接口。业务浏览器迁移至createChatClient和标准API，旧 `/console/chat` 身份头示例已移除，默认示例要求已认证 Principal。REMOTE 与 MANAGED 知识复用已有实现和权限过滤；不新增解析范围。
-
-关闭chat.enabled并回滚业务部署/SDK版本可停止新入口；底座数据不删除。回退配置使用显式发布与入口版本切换，保留所有治理停用。当前租约续期沿用应用管理凭据；只提供聊天的生产网关可以关闭能力注册并完全不持有管理凭据。
-
-
-
-## 类型化模型声明示例
-
-::: code-group
-
-```java [Java]
-String v="1.0.0";
-var definitions = new RegistrationManifest(List.of(
-    ModelDeclarations.openAIProvider("provider", v, endpoint, "MODEL_KEY", true),
-    ModelDeclarations.model("model", v, "provider", v, vendorModel,
-        ModelCapabilities.builder().supports(ModelCapabilities.Feature.TOOL_CALLING, true).build()),
-    ModelDeclarations.binding("binding", v, "model", v),
-    ModelDeclarations.profile("profile", v, ModelProfile.builder("binding", v).maxOutputTokens(1024).build()),
-    ModelDeclarations.agent("main", v, "使用业务工具回答。", "profile", v, tools, knowledge)
-)).managedBy("orders-service");
-```
-
-```kotlin [Kotlin]
-import dev.sparktide.sdk.*
-import dev.sparktide.sdk.kotlin.*
-import java.net.URI
-
-val v = "1.0.0"
-val graph = RegistrationManifest(listOf(
-    openAIProvider("provider", v, URI.create(endpoint), "MODEL_KEY", true),
-    modelDefinition("model", v, ReleaseBundle.Entry("provider", v), vendorModel,
-        ModelCapabilities.builder().supports(ModelCapabilities.Feature.TOOL_CALLING, true).build()),
-    modelBinding("binding", v, ReleaseBundle.Entry("model", v)),
-    modelProfile("profile", v, ModelProfile.builder("binding", v).maxOutputTokens(1024).build()),
-    agentDefinition("main", v, "使用业务工具回答。", ReleaseBundle.Entry("profile", v), tools, knowledge)
-)).managedBy("orders-service")
-```
-
-:::
-
-Spring 中将清单作为 Bean，工具和知识用 `@AgentTool`、`@AgentKnowledge` 声明；无需手写聊天 Controller。生产发布作业显式调用 `SparkTideRegistration.release(reason)`。参见后台仓库 `examples/ops-assistant-service` 的完整样例。
-
-Kotlin 示例导入 `dev.sparktide.sdk.*` 和 `dev.sparktide.sdk.kotlin.*`，使用 `remoteProvider` 声明后台代理提供商；`tools` 与 `knowledge` 同为精确版本引用列表。Java 与 Kotlin 的声明、发布、身份及流语义一致。Kotlin 安装制品已在独立 JVM 工程验证声明 DSL、用户认证和会话生命周期；旧定义 DSL、协程等待和 AgentClient 保留兼容。
+本轮 safeOps 声明推进为 1.2.1，接入目录剩 6 个 Java 文件、408 行，工具调用原公共业务 Service，前端已移除 AI bootstrap/projects 端点。最终原生 Java8 消费者 clean/package 24/24 通过，SDK 依赖统一为 -6；Jar 及其打包资源中没有 ui-catalog.json，不依赖前端目录复制。最终版本真实 DeepSeek 三场景、23 项运行检查、原认证专项 32/32 和六工具真实 HTTP/数据库 10 项检查通过；浏览器 UI 20/20、完整历史/退出通过且夹具已还原，本轮本机隔离候选验收完成。计入新增公共业务代码后，保守全接入口径仍净减至少 2073 行。safeOps 本轮 24 项不代表原业务全项目测试，7 项 DynamicDataSourceTest 仍受缺驱动环境限制；前轮 -4/1.1.1 的三场景和旧包浏览器证据仅按原批次保留，详细边界见[本轮范围](../产品支持/版本说明.md#基础设施下沉与业务服务复用)。

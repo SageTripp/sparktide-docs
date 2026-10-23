@@ -17,7 +17,7 @@ export const sidebar = [
     page('文档怎么读', '开始使用/阅读地图'),
     page('版本与获取', '开始使用/版本与获取')
   ], false),
-  group('应用接入', [page('接入流程', '教程/README'), ...tutorialSteps], false),
+  group('应用接入', [page('新版 SDK · 业务声明与自动基建（候选）', '开发接入/SDK简化接入'), page('已有项目接入分工', '开发接入/接入流程'), group('公开 0.1.0 固定教程', [page('固定教程与下载边界', '教程/README'), ...tutorialSteps])], false),
   group('能力指南', [
     page('能力概览', '使用指南/README'),
     group('模型篇', [page('模型接入与概念', '使用指南/模型接入'), page('模型深入路线', '开发接入/模型治理/README'),
@@ -32,9 +32,9 @@ export const sidebar = [
   ]),
   group('SDK 参考', [
     page('SDK 参考总览','开发接入/README'),page('已有项目怎样接入','开发接入/接入流程'),
-    page('SDK 接入方式','开发接入/SDK简化接入'),
+    page('新版 SDK 接入（内部候选）','开发接入/SDK简化接入'),
     page('业务后台 SDK · Java / Kotlin','开发接入/业务后台SDK'),page('前端聊天 SDK · JS / TS','开发接入/前端SDK'),
-    page('React / Vue 组件与状态层','开发接入/React与Vue'),page('业务接入专题索引','开发接入/业务接入/README'),page('类型化客户端（兼容参考）','开发接入/业务接入/类型化聊天')
+    page('React / Vue3 / Vue2 组件与状态层','开发接入/React与Vue'),page('业务接入专题索引','开发接入/业务接入/README'),page('历史客户端与低层协议参考','开发接入/业务接入/类型化聊天')
   ]),
   group('部署、运维与控制台', [
     page('部署与运维路线','部署运维/README'),
