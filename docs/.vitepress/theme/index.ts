@@ -14,7 +14,7 @@ export default {
     return () => h(DefaultTheme.Layout, null, {
       'sidebar-nav-before': () => h('div', { class: 'sidebar-caption' }, ['开发者文档', h('span', ' / DOCS')]),
       'aside-outline-after': () => h('div', { class: 'aside-help' }, [
-        h('a', { href: withBase('/开始使用/版本与获取.html') }, '版本与获取 ↗'),
+        h('a', { href: withBase('/开始使用/版本与获取.html') }, '版本与获取'),
         h('a', { href: withBase('/产品支持/常见问题.html') }, '遇到问题？'),
       ]),
       'doc-before': () => {
