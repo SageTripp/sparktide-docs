@@ -7,9 +7,10 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs && node scripts/legacy-routes.mjs",
     "docs:preview": "vitepress preview docs",
-    "docs:check": "node scripts/check-site.mjs",
+    "docs:check": "node scripts/check-site.mjs && node scripts/check-docs-design.mjs",
     "docs:api": "node scripts/generate-reference.mjs",
-    "docs:examples": "python scripts/package-tutorial.py"
+    "docs:examples": "python scripts/package-tutorial.py",
+    "docs:check:design": "node scripts/check-docs-design.mjs"
   },
   "devDependencies": {
     "vitepress": "1.6.4"

@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const root = path.resolve('docs/.vitepress/dist')
@@ -10,14 +10,17 @@ async function walk(dir) {
   return (await Promise.all(entries.map(e => e.isDirectory() ? walk(path.join(dir, e.name)) : path.join(dir, e.name)))).flat()
 }
 const files = await walk(root)
+const existingFiles = new Set(files)
 const htmlFiles = files.filter(f => f.endsWith('.html'))
 if (!htmlFiles.length) throw new Error('没有构建产物，请先运行 npm run docs:build')
+// Each page is linked many times by shared navigation. Read it once, not once per link.
+const htmlContents = new Map(await Promise.all(htmlFiles.map(async file => [file, await readFile(file, 'utf8')])))
 const failures = []
 let checked = 0
 // 入链计数：真实内容页必须能从导航或其它页面到达；旧地址跳转桩按设计不被链接，豁免。
 const inbound = new Map(htmlFiles.map(file => [file, 0]))
 for (const file of htmlFiles) {
-  const html = await readFile(file, 'utf8')
+  const html = htmlContents.get(file)
   const page = new URL(base + path.relative(root, file).split(path.sep).join('/'), origin)
   for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
     const ref = match[1].replaceAll('&amp;', '&')
@@ -34,10 +37,10 @@ for (const file of htmlFiles) {
       continue
     }
     try {
-      if ((await stat(target)).isDirectory()) target = path.join(target, 'index.html')
-      await stat(target)
+      if (existingFiles.has(path.join(target, 'index.html'))) target = path.join(target, 'index.html')
+      if (!existingFiles.has(target)) throw new Error('文件不存在')
       if (url.hash && target.endsWith('.html')) {
-        const content = await readFile(target, 'utf8')
+        const content = htmlContents.get(target) ?? await readFile(target, 'utf8')
         const id = decodeURIComponent(url.hash.slice(1))
         if (!content.includes(`id="${id}"`)) throw new Error(`不存在的锚点 ${id}`)
       }
@@ -56,7 +59,7 @@ const siteEntry = file => {
 }
 for (const [file, count] of inbound) {
   if (count > 0 || siteEntry(file)) continue
-  const html = await readFile(file, 'utf8')
+  const html = htmlContents.get(file)
   if (html.includes('http-equiv="refresh"')) continue
   failures.push(`${path.relative(root, file)}: 内容页没有任何站内入链，用户无法从导航到达`)
 }
