@@ -37,9 +37,12 @@ export default defineConfig({
   buildEnd: async (siteConfig) => {
     await writeFile(join(siteConfig.outDir, 'build-info.json'), JSON.stringify({ revision, sourceDirty, currentVersion: versions.current, site: 'sparktide-docs', generatedAt: new Date().toISOString() }, null, 2) + '\n')
   },
-  head: [['link', { rel: 'icon', type: 'image/png', href: `${base}sparktide-logo.png` }], ['meta', { name: 'sparktide-docs-revision', content: revision }]],
+  transformHead: ({ pageData }) => pageData.frontmatter.pageClass === 'product-home'
+    ? [['link', { rel: 'preload', as: 'image', type: 'image/webp', href: `${base}品牌/启澜玻璃标志.webp`, fetchpriority: 'high' }]]
+    : [],
+  head: [['link', { rel: 'icon', type: 'image/png', href: `${base}sparktide-favicon.png` }], ['meta', { name: 'sparktide-docs-revision', content: revision }]],
   themeConfig: {
-    logo: { src: '/sparktide-logo.png', alt: 'SparkTide 启澜' }, siteTitle: '启澜文档',
+    logo: { src: '/sparktide-logo.webp', alt: 'SparkTide 启澜' }, siteTitle: '启澜文档',
     nav: [
       { text: '产品能力', link: '/#capabilities' },
       { text: '接入方式', link: '/#integration' },

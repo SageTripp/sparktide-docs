@@ -34,6 +34,10 @@ mise exec node@24.22.1 npm@10.9.4 -- npm run docs:preview -- --host 127.0.0.1 --
 
 子路径验证：设置 `DOCS_BASE=/SparkTide/` 后重新 build/check，随后恢复 `/` 构建供本地审阅。检查覆盖实际 HTML、链接、资源、锚点、页面可达性、版本上下文、栏目隔离和归档隔离。构建记录输出 `build-info.json`，标明代码提交及工作区修改状态。
 
+## 品牌图片
+
+页面使用压缩后的 WebP 主图、96px Logo 和独立的 48px PNG 标签页图标；原始 PNG 保留供后续制作，页面不直接加载。更新原图后，在已安装 Pillow 的本地 Python 环境运行 `python scripts/compress-brand-images.py`，再构建并检查画质。主图保留原分辨率和透明通道，首页单独预加载，不让文档页下载主图。
+
 ## 同步机器合同
 
 权威来源为平台仓库 `contracts/` 中的 `openapi.json`、`business-chat.openapi.json`、`agent-event.schema.json`、`knowledge-callback.schema.json`、`remote-model.schema.json`。复制到当前版本的静态目录，再执行 `npm run docs:api`；也可 `npm run docs:api -- 0.2.0` 指定已登记版本。

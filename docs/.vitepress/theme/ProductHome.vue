@@ -112,7 +112,7 @@ const features = [
     <PortalSky :page="skyPage" />
     <section class="product-hero portal-page" aria-labelledby="product-title">
       <div class="hero-grid" aria-hidden="true"></div>
-      <div class="portal-width hero-topline"><a :href="withBase('/')" class="hero-brand"><img :src="withBase('/sparktide-logo.png')" alt="" width="32" height="32" /><strong>启澜</strong><span>SparkTide</span></a><a :href="doc('README')">开发文档 <PortalIcon name="arrow" /></a></div>
+      <div class="portal-width hero-topline"><a :href="withBase('/')" class="hero-brand"><img :src="withBase('/sparktide-logo.webp')" alt="" width="32" height="32" /><strong>启澜</strong><span>SparkTide</span></a><a :href="doc('README')">开发文档 <PortalIcon name="arrow" /></a></div>
       <div class="portal-width hero-inner">
         <div class="hero-message">
           <p class="portal-eyebrow"><span></span> 让智能体成为业务的一部分</p>
@@ -126,7 +126,7 @@ const features = [
         </div>
         <div class="hero-composition" aria-label="模型、知识与工具连接为业务助手">
           <div class="composition-orbit orbit-one" aria-hidden="true"></div><div class="composition-orbit orbit-two" aria-hidden="true"></div>
-          <img class="hero-sculpture" :src="withBase('/品牌/启澜玻璃标志.png')" alt="启澜星芒与三道浪形的立体玻璃标志" width="1280" height="1280" fetchpriority="high" />
+          <img class="hero-sculpture" :src="withBase('/品牌/启澜玻璃标志.webp')" alt="启澜星芒与三道浪形的立体玻璃标志" width="1254" height="1254" fetchpriority="high" />
           <a v-glow class="glass-surface orbit-card orbit-model" :href="doc('能力指南/智能体')"><PortalIcon name="model" /><div><small>INTELLIGENCE</small><strong>模型与智能体</strong><span>定义职责 · 选择能力</span></div></a>
           <a v-glow class="glass-surface orbit-card orbit-knowledge" :href="doc('能力指南/知识问答')"><PortalIcon name="knowledge" /><div><small>KNOWLEDGE</small><strong>业务知识</strong><span>检索 · 引用 · 可追溯</span></div></a>
           <a v-glow class="glass-surface orbit-card orbit-tools" :href="doc('能力指南/业务工具')"><PortalIcon name="tool" /><div><small>ACTION</small><strong>业务工具</strong><span>连接服务 · 受控操作</span></div></a>
