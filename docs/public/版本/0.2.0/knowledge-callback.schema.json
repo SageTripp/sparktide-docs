@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "启澜知识回调协议 1.0",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/KnowledgeCallbackRequest"
+    },
+    {
+      "$ref": "#/$defs/KnowledgeCallbackResult"
+    },
+    {
+      "$ref": "#/$defs/KnowledgeCallbackError"
+    }
+  ],
+  "$defs": {
+    "KnowledgeFilter": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "description": "所属应用的标识，出现在令牌、注册、对话、运行、工具执行和业务身份上。 在所属结构适用时为必填项；最少字符数1；最多字符数64。"
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "业务主体标识，出现在令牌、运行、工具执行、业务身份和权限回调上。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128,
+          "description": "租户标识，出现在令牌、知识定义、运行、工具执行和业务身份上。 在所属结构适用时为必填项；最少字符数0；最多字符数128。"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "TENANT",
+              "SUBJECT"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 2,
+          "description": "知识过滤条件中必须满足的过滤项列表，检索结果需同时符合这些必填条件。 在所属结构适用时为必填项；最多项数2。"
+        }
+      },
+      "required": [
+        "appId",
+        "subjectId",
+        "tenantId",
+        "required"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "DOCUMENT",
+            "URL",
+            "INLINE"
+          ],
+          "description": "类型标记。工具调用对象上固定为 function；文本、工具、用量、完成和错误帧各自用自己的类型常量。 在所属结构适用时为必填项；允许值：\"DOCUMENT\"、\"URL\"、\"INLINE\"。"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^https?://",
+          "description": "知识来源 KnowledgeSource 上的资源定位字符串，标明来源可回溯的位置。 最少字符数1；最多字符数2048。"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128,
+          "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 最少字符数0；最多字符数128。"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "知识来源所在的页码，用于定位文档内位置。 最小值1；最大值1000000。"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512,
+          "description": "知识来源的定位串，标明文档或来源的位置。 最少字符数0；最多字符数512。"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "URL",
+                "description": "类型标记。工具调用对象上固定为 function；文本、工具、用量、完成和错误帧各自用自己的类型常量。 在所属结构适用时为必填项；固定值：\"URL\"。"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "uri"
+            ]
+          }
+        }
+      ]
+    },
+    "KnowledgeItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_.:-]{1,128}$",
+          "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_.:-]{1,128}$",
+          "description": "知识文档标识。用于智能体事件、知识条目、引用预览、上传元数据、摄取任务和调试命中，用来指向一份文档，不是访问授权。 最少字符数1；最多字符数128。"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。 在所属结构适用时为必填项；最少字符数1；最多字符数16384。"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512,
+          "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 最少字符数0；最多字符数512。"
+        },
+        "source": {
+          "$ref": "#/$defs/KnowledgeSource",
+          "description": "来源标识。知识文档项为文档来源；检索事件为命中来源；可信上下文结果为上下文来源；费用上的 source 说明费用配置来源，不是供应商账单。 在所属结构适用时为必填项；具体结构见引用#/$defs/KnowledgeSource。"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "相关性或人工评分。知识条目、调试命中与评测命中为数值相关分；EvalManualScore 为整数人工分；Agent 事件中也可携带检索分。分值高低不表示已采纳。 最小值0；最大值1。"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "最多 4096 UTF-8 字节、嵌套深度 8；有限 JSON 值。"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128,
+          "description": "租户标识，出现在令牌、知识定义、运行、工具执行和业务身份上。 最少字符数0；最多字符数128。"
+        }
+      },
+      "required": [
+        "id",
+        "content",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeCallbackRequest": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0",
+          "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+        },
+        "appId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "所属应用的标识，出现在令牌、注册、对话、运行、工具执行和业务身份上。 在所属结构适用时为必填项；最少字符数1；最多字符数64。"
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "业务主体标识，出现在令牌、运行、工具执行、业务身份和权限回调上。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128,
+          "description": "租户标识，出现在令牌、知识定义、运行、工具执行和业务身份上。 在所属结构适用时为必填项；最少字符数0；最多字符数128。"
+        },
+        "knowledgeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "知识资源标识，用于检索事件、知识回调、引用预览、摄入作业和知识调试，指明所操作的知识对象。 在所属结构适用时为必填项；最少字符数1；最多字符数64。"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项；最少字符数1；最多字符数64。"
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "description": "知识回调、知识调试或评测用例中的检索问句文本，是交给知识检索的查询内容。 在所属结构适用时为必填项；最少字符数1；最多字符数16384。"
+        },
+        "topK": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "知识定义、知识回调、路由策略、调试请求与结果、评测请求中的返回条数上限，表示最多取多少条命中。 在所属结构适用时为必填项；最小值1；最大值10。"
+        },
+        "filters": {
+          "$ref": "#/$defs/KnowledgeFilter",
+          "description": "知识回调请求中的 KnowledgeFilter，声明本次回调检索要应用的过滤条件；过滤条件不是调用者身份。 在所属结构适用时为必填项；具体结构见引用#/$defs/KnowledgeFilter。"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Agent 事件、工具执行、业务身份、权限回调、模型调用或远端模型请求所归属的运行标识，把记录关联到同一次运行。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "运行、错误、Agent 事件、业务身份、权限回调或远程模型请求上的轨迹标识，用于把同一次处理串起来。它是关联号，可丢的观测轨迹不能代替可靠运行记录。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "executionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "执行标识。知识回调用它指向本次知识执行，审计查询和审计记录用它关联对应执行。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "deadline": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807,
+          "description": "当前操作、预留或凭据的绝对截止时刻，使用Unix毫秒；到期后的处理遵循所属操作规则，不代表已经完成或取消。 在所属结构适用时为必填项；最小值1；最大值9223372036854775807。"
+        },
+        "trustedContext": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "知识回调请求中附带的可信上下文对象。它来自已建立的可信边界，供知识侧使用；客户端自称的 Context 不能冒充该对象。 在所属结构适用时为必填项。"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "appId",
+        "subjectId",
+        "tenantId",
+        "knowledgeId",
+        "version",
+        "query",
+        "topK",
+        "filters",
+        "runId",
+        "traceId",
+        "executionId",
+        "deadline",
+        "trustedContext"
+      ],
+      "additionalProperties": false
+    },
+    "KnowledgeCallbackResult": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0",
+          "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KnowledgeItem"
+          },
+          "maxItems": 100,
+          "description": "当前页或回调结果中的记录集合。元素随发布、模型调用、探测、配额用量、配额预留或知识回调而不同。 在所属结构适用时为必填项；最多项数100。"
+        },
+        "appliedFilters": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "TENANT",
+              "SUBJECT"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 2,
+          "description": "知识回调结果中实际套用的过滤条件列表，记录检索时生效的过滤。 在所属结构适用时为必填项；最多项数2。"
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "items",
+        "appliedFilters"
+      ],
+      "additionalProperties": false,
+      "description": "完整结果上限 1 MiB；id 不重复。空结果正常无匹配；必须确认定义要求的全部过滤。"
+    },
+    "KnowledgeCallbackError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "KNOWLEDGE_ACCESS_DENIED",
+                "KNOWLEDGE_TIMED_OUT",
+                "KNOWLEDGE_UNAVAILABLE",
+                "KNOWLEDGE_RATE_LIMITED",
+                "KNOWLEDGE_REQUEST_REJECTED",
+                "KNOWLEDGE_PROTOCOL_ERROR"
+              ],
+              "description": "错误、Agent 事件、发布错误、兼容性错误或警告中的错误码。远端模型错误取 MODEL_UNAVAILABLE、MODEL_TIMED_OUT、MODEL_RATE_LIMITED、MODEL_AUTH_FAILED、MODEL_REQUEST_REJECTED、MODEL_FEATURE_UNSUPPORTED、MODEL_PROTOCOL_ERROR。 在所属结构适用时为必填项；允许值：\"KNOWLEDGE_ACCESS_DENIED\"、\"KNOWLEDGE_TIMED_OUT\"、\"KNOWLEDGE_UNAVAILABLE\"、\"KNOWLEDGE_RATE_LIMITED\"、\"KNOWLEDGE_REQUEST_REJECTED\"、\"KNOWLEDGE_PROTOCOL_ERROR\"。"
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false,
+          "description": "结构化错误对象。用于接口错误、远程模型失败、知识回调错误、批量项、摄取任务和向量构建任务，承载失败信息；出现错误不表示整体受理已完成。 在所属结构适用时为必填项。"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

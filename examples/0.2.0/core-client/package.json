@@ -1,0 +1,15 @@
+{
+  "name": "sparktide-docs-example-core",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@sparktide/frontend-sdk": "0.2.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

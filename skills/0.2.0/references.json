@@ -1,0 +1,26 @@
+{
+  "sparktide-backend": [
+    "开发接入/后端接入.md",
+    "开发接入/身份与权限.md",
+    "参考资料/SDK依赖/SpringBoot4启动器.md",
+    "参考资料/SDK依赖/SpringBoot2启动器.md"
+  ],
+  "sparktide-frontend": [
+    "开发接入/前端接入.md",
+    "参考资料/SDK依赖/前端核心.md",
+    "开发接入/自定义界面.md"
+  ],
+  "sparktide-models": [
+    "参考资料/SDK依赖/模型声明.md",
+    "参考资料/SDK依赖/OpenAI模型.md",
+    "参考资料/SDK依赖/OpenAI兼容模型.md",
+    "参考资料/SDK依赖/模型HTTP传输.md",
+    "参考资料/SDK依赖/DeepSeek模型.md",
+    "参考资料/SDK依赖/Ollama模型.md",
+    "参考资料/SDK依赖/OpenCodeGo模型.md"
+  ],
+  "sparktide-troubleshooting": [
+    "参考资料/公共错误码.md",
+    "参考资料/能力与限制.md"
+  ]
+}

@@ -1,0 +1,215 @@
+/* 首页隐藏滚动条但保留原生滚动；离开首页后自动恢复。 */
+html:has(.product-home) { scrollbar-width: none; }
+html:has(.product-home)::-webkit-scrollbar { width: 0; height: 0; }
+.product-home { color-scheme: dark; color: var(--vp-c-text-1); background: #070e1c; }
+.product-home .VPNavBarAppearance,.product-home .VPNavScreenAppearance { display: none; }
+.product-home .VPContent { padding-top: 0 !important; }
+.product-home .VPNav { position: fixed; top: 0; left: 0; right: 0; transform: translateY(-100%); opacity: 0; visibility: hidden; transition: transform .3s, opacity .3s, visibility .3s; }
+.product-home:has(.is-scrolled) .VPNav { transform: none; opacity: 1; visibility: visible; }
+.product-home .VPNavBar { background: color-mix(in srgb,var(--vp-c-bg) 75%,transparent) !important; backdrop-filter: blur(22px); box-shadow: 0 6px 30px #00000008; }
+.product-home .VPFooter { background: transparent; }
+.product-portal { --portal-accent: var(--vp-c-brand-1); --hero-progress: 0; position: relative; isolation: isolate; color: var(--vp-c-text-1); overflow: clip; }
+.portal-width { max-width: 1240px; margin: 0 auto; padding-left: 32px; padding-right: 32px; }
+.product-portal a { text-decoration: none; }
+.product-portal section[id] { scroll-margin-top: 96px; }
+.product-portal h2 { font-size: 36px; font-weight: 650; line-height: 1.45; letter-spacing: -.8px; margin: 0; }
+.product-portal h3 { font-weight: 600; }
+.portal-eyebrow { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 650; letter-spacing: 1.8px; color: var(--st-accent); margin: 0 0 24px; }
+.portal-eyebrow > span { height: 6px; width: 6px; border-radius: 50%; background: currentColor; }
+.product-hero { position: relative; isolation: isolate; min-height: 100svh; background: radial-gradient(ellipse at 75% 45%,#a9dcf710,transparent 55%); }
+.hero-grid { display: none; }
+.hero-topline { display: flex; align-items: center; justify-content: space-between; height: 100px; }
+.hero-brand { display: flex; align-items: center; gap: 10px; color: var(--vp-c-text-1); }
+.hero-brand img { border-radius: 6px; background: white; }
+.hero-brand strong { font-size: 22px; letter-spacing: 2px; }
+.hero-brand span { margin-left: 4px; font-size: 16px; letter-spacing: .5px; }
+.hero-topline > a:last-child { display: flex; align-items: center; gap: 14px; font-size: 13px; min-height: 44px; color: var(--vp-c-text-2); }
+.hero-topline svg { width: 18px; height: 18px; }
+.hero-inner { position: relative; min-height: calc(100svh - 180px); display: grid; grid-template-columns: 1fr 1.12fr; align-items: center; gap: 28px; padding-top: 28px; padding-bottom: 70px; }
+.hero-message { position: relative; z-index: 3; transform: translateY(calc(var(--hero-progress) * -100px)); opacity: calc(1 - var(--hero-progress) * .6); }
+.product-portal h1 { font-size: clamp(48px,5vw,80px); line-height: 1.2; letter-spacing: -3px; font-weight: 700; margin: 0 0 28px; }
+.product-portal h1 em { font-style: normal; background: linear-gradient(110deg,var(--vp-c-brand-1),var(--st-accent)); color: transparent; background-clip: text; }
+.hero-description { font-size: 20px; line-height: 1.9; margin: 0 0 32px; color: var(--vp-c-text-2); }
+.portal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.portal-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 50px; padding: 0 22px; border-radius: 12px; font-size: 14px; font-weight: 550; }
+.portal-button svg { width: 18px; height: 18px; }
+.product-portal .portal-button.primary { color: var(--vp-c-brand-1); border-color: color-mix(in srgb,var(--vp-c-brand-1) 45%,transparent); background: linear-gradient(130deg,#ffffff55,transparent),var(--vp-c-brand-soft); box-shadow: 0 8px 28px #2085c817; }
+.product-portal .portal-button.secondary { color: var(--vp-c-text-1); }
+.dark .product-portal .portal-button.primary { background: linear-gradient(130deg,#8bddff10,#4487c006); color: #d6f3ff; border-color: #91d7ff65; box-shadow: 0 8px 28px #168cd51a; }
+.hero-version { display: flex; align-items: center; gap: 12px; margin-top: 26px; font-size: 12px; color: var(--portal-accent); }
+.hero-version span { font-size: 11px; color: var(--vp-c-text-3); }
+.hero-composition { position: relative; height: 600px; min-width: 0; perspective: 1000px; }
+.hero-sculpture { position: absolute; width: 112%; max-width: none; left: -4%; top: -3%; height: 112%; object-fit: contain; filter: drop-shadow(0 32px 35px #1477b828); transform: translateY(calc(var(--hero-progress) * 100px)) rotate(calc(var(--hero-progress) * 12deg)) scale(calc(1 - var(--hero-progress) * .12)); }
+.composition-orbit { position: absolute; border: 1px solid var(--st-border-hover); opacity: .36; border-radius: 50%; pointer-events: none; }
+.orbit-one { width: 105%; height: 65%; left: -2%; top: 20%; transform: rotate(-30deg); }
+.orbit-two { width: 88%; height: 90%; left: 8%; top: 5%; transform: rotate(25deg); border-style: dashed; opacity: .18; }
+.product-portal .orbit-card { position: absolute; z-index: 2; display: flex; gap: 12px; align-items: center; padding: 18px 22px; border-radius: 12px; color: var(--vp-c-text-1); }
+.orbit-card > svg { width: 28px; height: 28px; color: var(--portal-accent); }
+.orbit-card small { display: block; color: var(--st-accent); font-size: 8px; letter-spacing: 1.5px; margin-bottom: 6px; }
+.orbit-card strong { display: block; font-size: 15px; font-weight: 600; }
+.orbit-card div > span { display: block; font-size: 10px; color: var(--vp-c-text-2); margin-top: 7px; }
+.orbit-model { left: 0; top: 10%; transform: translate(calc(var(--hero-progress) * -90px),calc(var(--hero-progress) * -45px)) rotate(-5deg); }
+.orbit-knowledge { right: -5%; top: 38%; transform: translate(calc(var(--hero-progress) * 60px),calc(var(--hero-progress) * -90px)) rotate(4deg); }
+.orbit-tools { left: 2%; bottom: 8%; transform: translate(calc(var(--hero-progress) * -40px),calc(var(--hero-progress) * 40px)) rotate(-3deg); }
+.composition-caption { position: absolute; bottom: -5px; right: 0; display: flex; align-items: center; gap: 8px; font-size: 8px; letter-spacing: 1.4px; color: var(--vp-c-text-3); }
+.composition-caption span { width: 5px; height: 5px; border-radius: 50%; background: var(--st-accent); }
+.scroll-cue { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 20px; color: var(--vp-c-text-3); min-height: 44px; font-size: 11px; letter-spacing: 2px; }
+.hero-bottom-glow { position: absolute; bottom: 0; left: 15%; width: 70%; height: 1px; background: linear-gradient(90deg,transparent,var(--st-border-hover),transparent); }
+.product-experience { display: grid; grid-template-columns: .85fr 1.15fr; gap: 80px; align-items: center; padding-top: 120px; padding-bottom: 100px; }
+.experience-intro > p:not(.portal-eyebrow) { font-size: 16px; line-height: 1.9; color: var(--vp-c-text-2); max-width: 390px; margin-top: 24px; }
+.experience-intro > .experience-hint { font-size: 12px !important; color: var(--vp-c-text-3) !important; }
+.experience-scenes { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; max-width: 380px; }
+.experience-scenes button { display: flex; align-items: center; gap: 16px; padding: 17px 20px; text-align: left; border: 1px solid transparent; border-radius: 12px; color: var(--vp-c-text-2); cursor: pointer; transition: background .25s,border-color .25s; }
+.experience-scenes button > svg { width: 24px; height: 24px; flex-shrink: 0; }
+.experience-scenes strong,.experience-scenes small { display: block; }
+.experience-scenes strong { font-size: 15px; font-weight: 550; }
+.experience-scenes small { font-size: 11px; margin-top: 5px; color: var(--vp-c-text-2); }
+.experience-scenes i { margin-left: auto; font-size: 10px; font-style: normal; color: var(--vp-c-text-3); }
+.experience-scenes button[aria-pressed=true] { color: var(--portal-accent); border-color: var(--st-border-hover); background: var(--vp-c-brand-soft); }
+.experience-scenes button:hover { background: var(--vp-c-bg-soft); }
+.experience-scenes button:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 3px; }
+.product-stage { position: relative; min-width: 0; }
+.product-foundation { display: flex; align-items: center; justify-content: space-between; padding-top: 28px; margin-top: 32px; border-top: 1px solid var(--vp-c-divider); }
+.product-foundation p { font-size: 13px; color: var(--vp-c-text-2); margin: 0; }
+.product-foundation > div { display: flex; gap: 26px; align-items: center; font-size: 14px; }
+.product-foundation i { font-style: normal; color: var(--vp-c-text-3); }
+.product-foundation strong { font-weight: 500; color: var(--portal-accent); }
+.portal-section { padding-top: 96px; padding-bottom: 96px; }
+.portal-section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; margin-bottom: 40px; }
+.portal-section-heading .portal-eyebrow { margin-bottom: 16px; }
+.portal-section-heading > p { font-size: 13px; line-height: 1.9; color: var(--vp-c-text-2); margin: 0; }
+.product-features { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; position: relative; isolation: isolate; }
+.product-feature { padding: 26px; border-radius: 16px; color: inherit; }
+/* 稍深的薄玻璃保留清晰透景，局部柔光与星尘光芒共同照亮表面。 */
+.product-portal .glass-surface { position: relative; isolation: isolate; overflow: hidden; border: 0; background: linear-gradient(135deg,#b5e5ff0c,#ffffff02 48%,#96caff05),#10213666; backdrop-filter: blur(4px) saturate(120%); box-shadow: inset 0 -3px 6px #a7d8ff08,0 12px 30px #00000020; transition: border-color .22s,box-shadow .28s,translate .28s cubic-bezier(.2,.75,.25,1); }
+.product-portal .glass-surface > * { position: relative; z-index: 1; }
+.product-portal .glass-surface::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(260px circle at var(--glow-x,50%) var(--glow-y,50%),#9edfff24,transparent 72%); opacity: var(--glow-active,0); transition: opacity .22s; z-index: 0; }
+.product-portal .glass-surface:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 4px; }
+.product-portal .orbit-card.glass-surface { position: absolute; }
+/* 原生四芒星光标不依赖动画帧，热点与引力中心一致。 */
+@media (hover:hover) and (pointer:fine) {
+  .product-home { cursor: url('./cursors/star.svg') 20 20, auto; }
+  .product-home a,.product-home button,.product-home [role=button],.product-home summary { cursor: url('./cursors/star-link.svg') 22 22, pointer; }
+  .product-home input,.product-home textarea,.product-home [contenteditable=true] { cursor: text; }
+  .product-home button:disabled,.product-home [aria-disabled=true] { cursor: not-allowed; }
+  .product-home .product-portal .glass-surface:hover { translate: 0 -6px; box-shadow: inset 0 -5px 8px #a7d8ff14,0 8px 12px #07142566,0 22px 42px #00000048; }
+  .product-home .product-portal a.glass-surface:active { translate: 0 -2px; box-shadow: inset 0 -2px 5px #a7d8ff10,0 12px 24px #00000035; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .product-home .product-portal .glass-surface:hover,.product-home .product-portal a.glass-surface:active { translate: none; }
+}
+.feature-top { display: flex; justify-content: space-between; align-items: center; color: var(--vp-c-text-3); font-size: 12px; }
+.feature-top svg { width: 34px; height: 34px; color: var(--portal-accent); }
+.feature-top > span:last-child { transition: transform .25s; }
+.product-feature h3 { font-size: 19px; margin: 23px 0 12px; }
+.product-feature p { font-size: 14px; line-height: 1.9; color: var(--vp-c-text-2); margin: 0 0 22px; }
+.product-feature small { font-size: 10px; color: var(--vp-c-text-3); }
+
+.product-feature:hover h3,.product-feature:hover .feature-top { color: var(--portal-accent); }
+.product-feature:hover .feature-top > span:last-child { transform: translate(3px,-3px); }
+.integration-section { background: transparent; }
+.integration-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 100px; align-items: center; }
+.section-description { font-size: 14px; line-height: 1.9; color: var(--vp-c-text-2); max-width: 370px; margin: 24px 0; }
+.portal-text-link { display: inline-flex; gap: 20px; align-items: center; font-size: 13px; color: var(--portal-accent); min-height: 44px; }
+.integration-stack { position: relative; isolation: isolate; }
+.integration-stack > a { display: flex; gap: 18px; align-items: center; border-radius: 14px; padding: 23px 26px; color: inherit; }
+.layer-index { color: var(--vp-c-text-3); font-size: 11px; }
+.integration-stack h3 { font-size: 16px; margin: 0 0 5px; }
+.integration-stack p { font-size: 12px; color: var(--vp-c-text-2); margin: 0 0 9px; }
+.integration-stack small { font-size: 10px; letter-spacing: .5px; color: var(--vp-c-text-3); }
+.integration-stack > a > span:last-child { margin-left: auto; color: var(--portal-accent); }
+.layer-connector { text-align: center; height: 28px; font-size: 18px; color: var(--vp-c-text-3); }
+.scenario-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 34px; }
+.scenario-grid article { border-left: 2px solid var(--vp-c-divider); padding-left: 24px; }
+.scenario-grid article > svg { display: block; width: 40px; height: 40px; margin-bottom: 24px; color: var(--portal-accent); }
+.scenario-grid article > span { font-size: 11px; color: var(--st-accent); }
+.scenario-grid h3 { font-size: 21px; margin: 18px 0 14px; }
+.scenario-grid p { font-size: 14px; line-height: 1.9; color: var(--vp-c-text-2); margin: 0 0 16px; }
+.scenario-grid a { display: inline-flex; min-height: 44px; align-items: center; font-size: 12px; color: var(--portal-accent); }
+.portal-closing { display: flex; justify-content: space-between; align-items: center; padding-top: 52px; padding-bottom: 64px; border-top: 1px solid var(--vp-c-divider); margin-bottom: 32px; }
+.portal-closing > div:last-child { display: flex; flex-direction: column; align-items: flex-start; }
+.portal-closing p:last-child { font-size: 11px; color: var(--vp-c-text-2); }
+.portal-closing p:last-child a { color: var(--portal-accent); }
+/* 进度由滚动位置驱动；默认可见，脚本未加载时也能完整阅读。 */
+.scroll-ready [data-reveal] { opacity: calc(.08 + var(--reveal,1) * .92); transform: translateY(calc((1 - var(--reveal,1)) * 70px)) scale(calc(.965 + var(--reveal,1) * .035)); }
+/* 使用浏览器原生按屏停靠，保留触摸、键盘、锚点和长内容的原生滚动。 */
+@media (min-width:1100px) and (min-height:760px) and (prefers-reduced-motion:no-preference) {
+  html:has(.product-home .is-paged) { scroll-snap-type: y mandatory; }
+  .product-home .portal-page { scroll-snap-align: start; scroll-snap-stop: always; scroll-margin-top: 0; min-height: 100svh; }
+  .product-home .product-portal section.portal-page[id] { scroll-margin-top: 0; }
+  .product-home .product-experience { padding-top: 104px; padding-bottom: 48px; }
+  .product-home #capabilities { display: flex; flex-direction: column; justify-content: center; padding-top: 96px; padding-bottom: 48px; }
+  .product-home .integration-section { display: flex; align-items: center; padding-top: 96px; padding-bottom: 48px; }
+  .product-home .integration-layout { width: 100%; }
+  .product-home .portal-finale { min-height: calc(100svh - 112px); display: flex; flex-direction: column; justify-content: center; padding-top: 96px; }
+  .product-home .portal-finale > section { width: 100%; }
+  .product-home #scenarios { padding-top: 0; padding-bottom: 52px; scroll-margin-top: 96px; }
+  .product-home .portal-closing { padding-top: 32px; padding-bottom: 32px; margin-bottom: 0; }
+  .product-home .portal-closing h2 { font-size: 28px; }
+}
+@media (max-width:1050px) {
+  .hero-composition { height: 480px; }
+  .hero-inner { gap: 4px; }
+  .product-portal .orbit-card { padding: 13px; gap: 9px; }
+  .orbit-card strong { font-size: 13px; }
+  .orbit-knowledge { right: -2%; }
+  .product-experience,.integration-layout { gap: 40px; }
+  .product-foundation > div { gap: 16px; }
+  .product-portal h2 { font-size: 28px; }
+}
+@media (max-width:767px) {
+  .portal-width { padding-left: 24px; padding-right: 24px; }
+  .hero-topline { height: 80px; }
+  .hero-brand strong { font-size: 18px; }
+  .hero-brand span { font-size: 13px; }
+  .hero-topline > a:last-child { font-size: 12px; gap: 6px; }
+  .hero-inner { grid-template-columns: 1fr; padding-top: 28px; padding-bottom: 65px; gap: 30px; }
+  .hero-message { transform: translateY(calc(var(--hero-progress) * -35px)); }
+  .product-portal h1 { font-size: 54px; }
+  .hero-description { font-size: 17px; }
+  .hero-composition { height: 390px; width: 100%; max-width: 500px; margin: 0 auto; }
+  .hero-sculpture { width: 106%; height: 106%; top: -1%; left: -3%; }
+  .product-portal .orbit-card { padding: 12px; border-radius: 8px; }
+  .orbit-card > svg { width: 23px; height: 23px; }
+  .orbit-card small { font-size: 7px; }
+  .orbit-card div > span { font-size: 9px; }
+  .orbit-model { top: 7%; transform: translateY(calc(var(--hero-progress) * -16px)) rotate(-5deg); }
+  .orbit-knowledge { right: 0; top: 40%; transform: translateY(calc(var(--hero-progress) * -24px)) rotate(4deg); }
+  .orbit-tools { bottom: 5%; transform: translateY(calc(var(--hero-progress) * 12px)) rotate(-3deg); }
+  .composition-caption { font-size: 7px; bottom: -20px; }
+  .scroll-cue { bottom: 10px; }
+  .product-experience { grid-template-columns: 1fr; padding-top: 64px; padding-bottom: 48px; gap: 32px; }
+  .experience-scenes { max-width: none; }
+  .experience-scenes button { padding: 13px 16px; }
+  .product-foundation { display: block; }
+  .product-foundation > div { margin-top: 20px; gap: 14px; font-size: 12px; }
+  .portal-section { padding-top: 60px; padding-bottom: 60px; }
+  .portal-section-heading { display: block; margin-bottom: 28px; }
+  .portal-section-heading > p { margin-top: 18px; }
+  .product-features { grid-template-columns: repeat(2,1fr); gap: 16px; }
+  .product-feature { padding: 20px; }
+  .integration-layout { grid-template-columns: 1fr; gap: 32px; }
+  .scenario-grid { grid-template-columns: 1fr; gap: 30px; }
+  .portal-closing { display: block; padding-top: 40px; padding-bottom: 32px; }
+  .portal-closing > div:last-child { margin-top: 24px; }
+  .product-portal h2 { font-size: 27px; }
+  .portal-eyebrow { font-size: 10px; }
+  .product-feature h3 { font-size: 17px; }
+  .product-feature small { line-height: 1.7; }
+}
+@media (max-width:400px) {
+  .product-features { grid-template-columns: 1fr; }
+  .product-foundation > div { gap: 10px; }
+  .product-portal h1 { font-size: 48px; }
+  .portal-button { gap: 16px; padding: 0 16px; }
+  .product-home .docs-brand { gap: 0; }
+  .product-home .docs-brand-home { font-size: 13px; gap: 6px; }
+  .product-home .docs-brand-home img { width: 24px; height: 24px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .product-home .VPNav,.product-portal * { transition: none !important; }
+  .scroll-ready [data-reveal] { opacity: 1; transform: none; }
+  .hero-message { opacity: 1; transform: none; }
+  .hero-sculpture { transform: none; }
+  .orbit-model { transform: rotate(-5deg); }.orbit-knowledge { transform: rotate(4deg); }.orbit-tools { transform: rotate(-3deg); }
+}

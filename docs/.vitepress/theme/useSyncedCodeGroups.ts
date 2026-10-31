@@ -4,7 +4,8 @@ import { onContentUpdated } from 'vitepress'
 // 构建工具的 Kotlin DSL 与业务代码的 Kotlin 是两种独立偏好。
 const families = {
   'jvm-language': ['Java', 'Kotlin'],
-  'web-framework': ['React', 'Vue'],
+  'web-framework': ['React', 'Vue 3', 'Vue 2'],
+  'web-language': ['TypeScript', 'JavaScript'],
   'node-package-manager': ['npm', 'pnpm', 'Yarn'],
   'jvm-build-tool': ['Gradle Kotlin DSL', 'Gradle Groovy DSL', 'Maven']
 } as const
@@ -14,7 +15,10 @@ const storagePrefix = 'sparktide:docs:code-group:'
 function describe(group: Element) {
   const inputs = Array.from(group.querySelectorAll<HTMLInputElement>(':scope > .tabs > input'))
   const labels = Array.from(group.querySelectorAll<HTMLElement>(':scope > .tabs > label'))
-  const titles = labels.map(label => label.dataset.title || label.textContent?.trim() || '')
+  const titles = labels.map(label => {
+    const title = label.dataset.title || label.textContent?.trim() || ''
+    return title === 'Vue' ? 'Vue 3' : title
+  })
   const family = (Object.keys(families) as Family[]).find(key =>
     titles.length > 1 && titles.every(title => (families[key] as readonly string[]).includes(title)))
   return { family, inputs, titles }
@@ -71,15 +75,27 @@ export function useSyncedCodeGroups() {
     }
   }
 
+  function storageChanged(event: StorageEvent) {
+    if (!event.key?.startsWith(storagePrefix)) return
+    const family = event.key.slice(storagePrefix.length) as Family
+    if (!(family in families)) return
+    if (event.newValue && (families[family] as readonly string[]).includes(event.newValue)) {
+      preferences.set(family, event.newValue)
+      restore()
+    }
+  }
+
   onMounted(() => {
     mounted = true
     document.addEventListener('change', changed)
+    window.addEventListener('storage', storageChanged)
     scheduleRestore()
   })
   onContentUpdated(scheduleRestore)
   onUnmounted(() => {
     mounted = false
     document.removeEventListener('change', changed)
+    window.removeEventListener('storage', storageChanged)
     if (frame !== undefined) cancelAnimationFrame(frame)
   })
 }

@@ -1,0 +1,22 @@
+{
+  "name": "sparktide-docs-example-react",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc -p tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@sparktide/ai-components": "0.2.0",
+    "@sparktide/frontend-sdk": "0.2.0",
+    "@sparktide/ui-basic": "0.2.0",
+    "@sparktide/ui-dashboard": "0.2.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.0",
+    "typescript": "5.9.3"
+  }
+}

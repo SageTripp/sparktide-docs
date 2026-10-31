@@ -1,0 +1,20 @@
+server:
+  port: ${OPS_PORT:8081}
+  address: ${OPS_BIND:127.0.0.1}
+sparktide:
+  application: ${SPARKTIDE_APP_ID:ops-assistant}
+  platform:
+    url: ${SPARKTIDE_PLATFORM_URL:http://127.0.0.1:18092}
+    credential: ${SPARKTIDE_TOKEN:}
+  callbacks:
+    url: ${SPARKTIDE_PUBLIC_BASE_URL:http://127.0.0.1:8089}
+    credential: ${SPARKTIDE_CALLBACK_TOKEN:}
+    secret-reference: ${SPARKTIDE_CALLBACK_SECRET_REF:OPS_CALLBACK_TOKEN}
+    ledger-directory: ${SPARKTIDE_LEDGER_DIR:./data/ledger}
+    port: ${OPS_CALLBACK_PORT:8089}
+  bind-address: ${OPS_CALLBACK_BIND:127.0.0.1}
+  deployment:
+    mode: ${OPS_DEPLOYMENT_MODE:PRODUCTION}
+    version: 1.0.0
+  http:
+    path: /api/ai

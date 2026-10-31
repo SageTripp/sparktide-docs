@@ -1,0 +1,2953 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SparkTide 业务后台聊天接口",
+    "version": "business-chat/v1",
+    "description": "部署在业务后台；认证由 ChatCredentialResolver 适配并由底座独立验证。没有管理入口。状态和事件仍属于底座。"
+  },
+  "servers": [
+    {
+      "url": "/api/ai",
+      "description": "默认前缀，可显式配置"
+    }
+  ],
+  "security": [
+    {
+      "businessBearer": []
+    },
+    {
+      "businessCookie": []
+    }
+  ],
+  "paths": {
+    "/chat": {
+      "post": {
+        "operationId": "post_chat",
+        "summary": "业务后台标准聊天接口",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "SDK 生成；提交不明时不得重发不同幂等键"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "description": "用途：业务后台按标准聊天协议提交一次对话并获得 Run。请求体 ChatRequest，200 返回 Run。这是业务入口协议，未装配的 Node 接口只说明用途，不表示生产已验收。身份：businessBearer 或 businessCookie 二选一。Cookie 名由业务认证配置，必须使用业务 CSRF，SDK 可传 CSRF 头。会话、模型、Context、appId 都不是授权依据，管理者不能旁路业务正文。请求：可选 Idempotency-Key，长度 1 至 128，由 SDK 生成；提交结果不明时不得改用另一个幂等键重发。响应：200 为已创建或关联的 Run，受理不等于后续事件已结束。错误：default 拒绝或失败，继承底座错误码，写操作不得自动重试。流程：提交后用 Run 查询与事件流跟踪；SSE 断流不取消 Run。"
+      }
+    },
+    "/conversations": {
+      "post": {
+        "operationId": "post_conversations",
+        "summary": "创建业务会话",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationCreate"
+              }
+            }
+          }
+        },
+        "description": "用途：按 ConversationCreate 创建一条业务会话，201 返回 Conversation。此为业务后台标准聊天协议的一部分，Node 未装配时身份：businessBearer，或名称由配置决定且必须带业务 CSRF 的 businessCookie。创建归属可信业务身份，不能用模型、Context 或 appId 充当授权，管理者没有业务正文旁路。请求：必填 JSON 正文，无额外路径参数。响应：201 表示会话已创建，后续读取仍受所有权约束且不应缓存为共享真源。错误：default 拒绝或失败并继承底座错误码。写操作不得自动重试；结果不明时由调用方显式核对是否已创建，而不是盲目再提交。流程：创建成功后使用返回标识读取或发起聊天。"
+      },
+      "get": {
+        "operationId": "get_conversations",
+        "summary": "分页列出当前用户的会话",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 200
+            },
+            "description": "本页最多返回的记录数，范围和缺省值以参数Schema为准。"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "description": "按当前排序跳过的记录数；不是可靠事件游标，不用于重放事件。"
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "仅接受单个true/false；默认未归档，true仅列已归档，不自动清理历史"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/ConversationPage"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "不缓存当前用户会话"
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：列出当前身份拥有的会话目录。身份：入口验证有效应用身份，按 appId、subjectId、tenantId 共同过滤所有者，不能用请求正文或 Context 替代身份。请求：limit、offset、archived 分页筛选，按 createdAt 倒序、相同时间按 id 倒序排列；更新会话不改变排序位置。响应：200 仅含会话 id、标题、创建及更新时间、消息数与归档时间，不含正文、摘要或业务查询结果。错误：认证和应用范围检查失败时拒绝。流程：目录不扫描历史业务资料权限；打开正文、运行和引用预览时在各自入口检查当前数据权限。历史业务权限变化不阻塞目录本身，所有者仍能看到其历史标题。"
+      }
+    },
+    "/conversations/{id}": {
+      "get": {
+        "operationId": "get_conversations__id_",
+        "summary": "读取单条业务会话",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 20
+            },
+            "description": "本页最多消息条数；不限制会话总长度。"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{16}:[1-9][0-9]{0,15}$"
+            },
+            "description": "上一页返回的 nextBefore；省略读取最新页，编辑会话后旧游标返回409。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：按标识读取一条业务会话，成功响应为 Conversation。只服务于已通过业务认证的调用方读取自己的会话，不生成摘要、不改归档、不触碰 Run。身份：businessBearer 或 businessCookie；Cookie 名由业务认证配置，必须使用业务 CSRF，SDK 可传 CSRF 头。路径 id、模型、Context、appId 都不是身份，管理者不能借管理身份读取业务正文。请求：路径 id，模式为 1 至 128 位字母数字及 _ . -。响应：200 为会话当前可见状态，涉及用户会话的读取按合同不缓存。错误：default 继承底座错误码，未见单独列出的状态码不要自行添加。流程：列表得到 id 后读取详情；若不存在或无权限，按继承错误处理并不自动重试写操作。未装配接口仅说明协议用途。\n完整历史按游标渐进读取，不触发模型或历史工具。每页最多20条，nextBefore为null表示最早页；游标绑定会话当前分支，编辑后须重新读取第一页。累计messageCount不受页大小限制。"
+      },
+      "patch": {
+        "operationId": "patch_conversations__id_",
+        "summary": "更新单条业务会话",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationRenamed"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationRename"
+              }
+            }
+          }
+        },
+        "description": "用途：按标识部分更新业务会话，请求体为会话更新 schema，成功返回更新后的会话。不把本接口解释成归档、恢复或标题生成，那些有独立路径。身份：businessBearer 或配置命名且带业务 CSRF 的 Cookie。可信身份只来自安全边界；路径 id、模型、Context、appId 不能授权，管理者不能旁路业务正文。请求：路径 id（1 至 128 位字母数字及 _ . -）和必填 JSON 正文。响应：成功表示已接受的字段被持久化，用户会话相关响应不应当缓存。错误：default 继承底座错误码。若底座返回冲突或前提失败，必须显式核对当前状态，写操作不得自动重试。流程：先读取会话，提交变更后再读取确认。未装配的 Node 接口只说明协议用途。"
+      },
+      "delete": {
+        "operationId": "delete_conversations__id_",
+        "summary": "删除单条业务会话",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDeleted"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：按标识删除一条业务会话。合同未声明删除会自动清理全部历史或取消活动 Run，调用方不得补充该语义。身份：businessBearer 或必须带 CSRF 的 businessCookie，名称由业务认证配置。只有安全边界上的业务身份可操作所属会话；id、模型、Context、appId 不是授权，管理者无正文旁路。请求：路径 id，符合 1 至 128 位字母数字及 _ . -。响应：成功响应表示删除被接受，具体字段以 Conversation 合同引用为准。错误：default 拒绝或失败，继承底座错误码。写操作不得自动重试；未知是否已删除时先读取核对，禁止换参数盲重放。流程：确认所有权与无需要保留的活动处理后提交，再查询确认结果。"
+      }
+    },
+    "/runs/{id}": {
+      "get": {
+        "operationId": "get_runs__id_",
+        "summary": "读取单次运行",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：按 Run 标识读取运行状态，成功体为 Run。用于聊天提交后的查询，不推进模型、不确认、不取消。身份：businessBearer 或 businessCookie。Cookie 名由业务认证配置，必须使用业务 CSRF，SDK 可传 CSRF 头。Run 标识、模型、Context、appId 不是身份，管理者没有业务正文旁路。请求：路径 id，模式为 1 至 128 位字母数字及 _ . -。响应：200 为当前 Run。运行未结束时不应把快照当成终态。错误：default 拒绝或失败，继承底座错误码，不另造状态码。流程：POST /chat 得到标识后轮询或配合事件流；查询失败不自动重放任何写操作，SSE 断流也不取消 Run。未装配时"
+      }
+    },
+    "/runs/{id}/cancel": {
+      "post": {
+        "operationId": "post_runs__id__cancel",
+        "summary": "取消单次运行",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：请求取消指定 Run。取消是显式写操作，不是事件流断开、刷新或读取失败的隐含结果。身份：businessBearer，或名称可配置且必须带业务 CSRF 的 businessCookie。只有可信业务身份能取消自己的运行；路径 id、模型、Context、appId 不是授权，管理者不能旁路正文。请求：路径 id，符合 1 至 128 位字母数字及 _ . -，合同未要求额外正文。响应：成功表示取消请求已接受，是否已进入终态须再读 Run 或事件。错误：default 继承底座错误码。写操作不得自动重试；结果不明时先查询，不要重复盲取消。流程：用户明确取消后提交，再读取状态确认。未知副作用不自动重放。Node 未装配只说明协议用途。"
+      }
+    },
+    "/runs/{id}/confirm": {
+      "post": {
+        "operationId": "post_runs__id__confirm",
+        "summary": "确认单次运行",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmationDecision"
+              }
+            }
+          }
+        },
+        "description": "用途：对指定 Run 提交确认，请求体为确认 schema，成功响应遵循 Run 合同。确认不等于自动重放此前失败步骤，也不授予新的身份。身份：businessBearer 或带 CSRF 的 businessCookie，Cookie 名由业务认证配置。确认者必须是安全边界认定的业务主体；模型、Context、appId 与路径 id 都不是授权依据，管理者没有业务正文旁路。请求：路径 id（1 至 128 位字母数字及 _ . -）及必填 JSON 正文。响应：成功表示确认已被接受，后续仍以 Run 与事件流为准。错误：default 继承底座错误码。写操作不得自动重试，冲突或前提失败必须显式核对。流程：展示待确认内容后由用户提交，再查询运行是否继续。未装配接口不声称已验收。"
+      }
+    },
+    "/runs/{id}/events": {
+      "get": {
+        "operationId": "get_runs__id__events",
+        "summary": "以 SSE 订阅运行事件",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}:[0-9]{1,15}$"
+            },
+            "description": "runId:sequence，默认为0；授权失败/游标过期不自动重试"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "AgentEvent 1.0 SSE，保留底座事件 ID、序号和终态"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：按 AgentEvent 1.0 订阅指定 Run 的 text/event-stream。事件保留底座事件 ID、序号和终态。断流不取消 Run。身份：businessBearer 或必须使用业务 CSRF 的 businessCookie，名称由业务认证配置。订阅不提升权限；模型、Context、appId 不是身份，管理者不能旁路正文。请求：路径 id 为 1 至 128 位字母数字及 _ . -；可选 Last-Event-ID，格式为 runId:sequence，默认从 0 开始。响应：200 为事件流。错误：default 为 JSON Error，继承底座错误码。授权失败或游标过期不得自动重试。流程：用 Last-Event-ID 续传；续传失败时先重新取得授权或查询 Run，不要把断线当成取消。终态以事件中的底座终态为准，断线后应查询 Run 而不是假定已结束。未装配时只说明协议。"
+      }
+    },
+    "/runs/{id}/citations/{citation}/preview": {
+      "get": {
+        "operationId": "citationPreview",
+        "summary": "按当前业务权限读取引用原文",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path",
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "citation",
+            "in": "path",
+            "description": "目标引用标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "引用原文与授权元数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "./openapi.json#/components/schemas/CitationPreview"
+                    },
+                    {
+                      "$ref": "./openapi.json#/components/schemas/ToolReferencePreview"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "当前权限已拒绝"
+          },
+          "404": {
+            "description": "引用不存在"
+          },
+          "409": {
+            "description": "权限纪元已变化"
+          }
+        },
+        "description": "用途：在当前业务权限下读取某次 Run 中一条引用的原文及授权元数据，200 按 scope 返回 CitationPreview 或 ToolReferencePreview。权限变化后不能沿用旧预览。身份：businessBearer 或带业务 CSRF 的 businessCookie，Cookie 名由配置决定。读取依据当前业务权限，不是模型、Context 或 appId；管理者没有业务正文旁路。请求：路径 id 与 citation。响应：200 为引用原文和授权元数据。错误：403 表示当前权限已拒绝，404 表示引用不存在，409 表示权限纪元已变化。未见的状态码不要编造。流程：纪元变化后必须重新授权再读，不能缓存旧原文继续展示。本接口只读，不改引用、不重放 Run。已装配的只读预览接口"
+      }
+    },
+    "/follow-ups/capabilities": {
+      "get": {
+        "operationId": "followUpCapabilities",
+        "summary": "发现独立的 follow-up-input/1.0 模式，未声明的模式必须保持关闭",
+        "tags": [
+          "Follow-up inputs"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "查询 follow-up-input/1.0 支持模式，未声明的模式必须禁用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/FollowUpCapabilities"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：在业务聊天入口发现已装配的独立 follow-up-input/1.0 模式，返回 FollowUpCapabilities。缺席模式必须保持禁用，客户端不得本地启用。身份：businessBearer 或 businessCookie；Cookie 名由业务认证配置，必须使用业务 CSRF，SDK 可传 CSRF 头。无路径 app。模型、Context、appId 不是身份，管理者不能旁路业务正文。请求：无参数、无正文。响应：200 为能力清单，未列出的模式保持关闭。错误：400、401、403、404、409、412、429、503 为结构化 Error，写操作不得自动重放。流程：渲染跟进入口前先读能力；随后的提交、编辑、取消都要单独调用并受各自约束。SSE 断流不取消 Run。未装配只说明协议，不表示已验收。能力结果只用于开关界面，不能缓存成永久授权。\n\n补充约束：follow-up-input/1.0；业务固定应用，复用当前登录认证，不接收客户端appId或可信身份。"
+      }
+    },
+    "/conversations/{conversationId}/follow-ups": {
+      "get": {
+        "operationId": "listFollowUps",
+        "summary": "读取所属待处理输入和有界终态回执，响应不得缓存",
+        "tags": [
+          "Follow-up inputs"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标会话标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "读取本人跟进队列及有界终态回执，禁止缓存",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/FollowUpState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：读取业务会话中调用方拥有的待处理跟进和有界终态回执，200 为 FollowUpState，响应不得缓存。身份：businessBearer 或必须带 CSRF 的 businessCookie，名称由配置决定。只读所属数据；conversationId、模型、Context、appId 不是授权，管理者无正文旁路。请求：路径 conversationId。响应：200 含待处理输入与有界回执，终态回执不能继续当可编辑项。错误：400、401、403、404、409、412、429、503，结构化错误且写操作永不自动重放。流程：展示队列、编辑或取消前先读本接口获取当前修订与状态。刷新失败或 SSE 断流都不取消活动 Run，也不隐含变更队列。未装配的 Node 协议不声称生产已验收。回执只在合同给出的有界范围内展示，过期后应重新读取。\n\n补充约束：follow-up-input/1.0；业务固定应用，复用当前登录认证，不接收客户端appId或可信身份。"
+      },
+      "post": {
+        "operationId": "submitFollowUp",
+        "summary": "受理排队或当前 Run 的跟进输入，受理不等于已应用",
+        "tags": [
+          "Follow-up inputs"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标会话标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "同一写入意图的稳定幂等键；仅对声明支持的操作有效，同键异载荷会冲突。结果未知时使用原键核对，不换键重发。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "受理队列或当前运行的跟进输入，受理不等于已应用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/FollowUpInput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./openapi.json#/components/schemas/FollowUpCreate"
+              }
+            }
+          }
+        },
+        "description": "用途：向业务会话提交排队输入或当前 Run 跟进，正文 FollowUpCreate，202 返回 FollowUpInput。合同规定受理不是已经应用到 Run。身份：businessBearer 或配置命名且带业务 CSRF 的 Cookie。可信身份来自安全边界；会话标识、模型、Context、appId 不能授权，管理者不能旁路正文。请求：路径 conversationId，必填 Idempotency-Key（1 至 128）。响应：202 仅表示受理。错误：400、401、403、404、409、412、429、503，写操作不得自动重试。结果不明时重放同一幂等键，不要新键盲重试。流程：先发现能力并确认模式存在，提交后查询列表；不得把 202 当成模型已消费。未知副作用不自动重放。未装配时只说明协议用途。提交前确认目标模式已在能力接口中出现，缺席模式保持关闭。\n\n补充约束：follow-up-input/1.0；业务固定应用，复用当前登录认证，不接收客户端appId或可信身份。"
+      }
+    },
+    "/conversations/{conversationId}/follow-ups/{inputId}": {
+      "patch": {
+        "operationId": "updateFollowUp",
+        "summary": "仅在修订约束下编辑尚未领取的排队输入",
+        "tags": [
+          "Follow-up inputs"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标会话标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          },
+          {
+            "name": "inputId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标待回答或跟进输入标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "按修订编辑尚未被领取的队列输入",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/FollowUpInput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./openapi.json#/components/schemas/FollowUpEdit"
+              }
+            }
+          }
+        },
+        "description": "用途：编辑业务会话里尚未领取的排队输入，正文 FollowUpEdit，200 返回 FollowUpInput。已领取或已进入 Run 的输入不在范围内。身份：businessBearer 或带 CSRF 的 businessCookie，Cookie 名由业务认证配置。授权只来自安全边界和所属关系；模型、Context、appId 不是身份，管理者不能改业务正文旁路。请求：路径 conversationId、inputId 与必填修订编辑正文。响应：200 为更新后的输入。错误：400、401、403、404、409、412、429、503，写操作不得自动重试。409、412 必须先读取最新修订再决定是否提交。流程：读队列、核对未领取与修订、提交、再读确认。不要在冲突后自动覆盖。未装配接口只说明协议，不声称已验收。编辑成功后以再次读取的修订为准，旧 If-Match 或旧正文不得继续使用。\n\n补充约束：follow-up-input/1.0；业务固定应用，复用当前登录认证，不接收客户端appId或可信身份。"
+      },
+      "delete": {
+        "operationId": "removeFollowUp",
+        "summary": "取消尚未领取的排队输入，且不取消活动 Run",
+        "tags": [
+          "Follow-up inputs"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标会话标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          },
+          {
+            "name": "inputId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标待回答或跟进输入标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9]+|\"[0-9]+\")$"
+            },
+            "description": "目标资源当前修订号，格式遵循当前接口；412时保留本地内容并读取核对，不自动换用新修订重发。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消尚未被领取的队列输入，不取消活动运行",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/FollowUpInput"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：取消业务会话中尚未领取的排队跟进，200 返回 FollowUpInput。该操作不取消活动 Run。身份：businessBearer 或必须使用业务 CSRF 的 businessCookie。只有所属可信身份可取消；模型、Context、appId 与路径标识都不是授权，管理者无正文旁路。请求：路径 conversationId、inputId，必填 If-Match，为数字或带引号数字。响应：200 表示未领取项已取消。错误：合同列出的结构化响应包括400（请求字段或格式非法）；401（认证缺失或失效）；403（角色、作用域或当前业务权限不允许）；404（目标不存在或对当前身份不可见）；409（资源状态或业务前置条件冲突，须核对当前事实）；412（请求修订与当前记录不符，须只读核对后显式决定）；429（达到请求、配额或并发上限）；503（可靠存储或受控服务不可用，不能按空结果处理）。412 与 409 表示修订或状态冲突，必须显式核对当前修订，禁止自动重放。流程：读取队列得到 If-Match，确认仍未领取后删除；若需停止 Run，使用 Run 取消或跟进控制，而不是本接口。删除后重新读取队列，确认该项不再处于待处理且活动 Run 未被连带取消。\n\n补充约束：follow-up-input/1.0；业务固定应用，复用当前登录认证，不接收客户端appId或可信身份。"
+      }
+    },
+    "/conversations/{conversationId}/follow-ups/control": {
+      "post": {
+        "operationId": "controlFollowUps",
+        "summary": "原子地暂停或恢复队列，或先暂停再停止当前活动 Run",
+        "tags": [
+          "Follow-up inputs"
+        ],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标会话标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "原子暂停或恢复队列，或暂停队列后停止活动运行",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/FollowUpState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；写入操作绝不自动重放。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./openapi.json#/components/schemas/FollowUpControl"
+              }
+            }
+          }
+        },
+        "description": "用途：原子控制业务会话的跟进队列，正文 FollowUpControl，200 返回 FollowUpState。允许暂停或恢复队列，或先暂停再停止当前活动 Run。身份：businessBearer 或必须带业务 CSRF 的 Cookie，名称由配置决定。控制权属于可信业务身份；conversationId、模型、Context、appId 不是授权，管理者无正文旁路。请求：路径 conversationId 与控制正文。响应：200 为控制后的状态，不得长期缓存。错误：合同列出的结构化响应包括400（请求字段或格式非法）；401（认证缺失或失效）；403（角色、作用域或当前业务权限不允许）；404（目标不存在或对当前身份不可见）；409（资源状态或业务前置条件冲突，须核对当前事实）；412（请求修订与当前记录不符，须只读核对后显式决定）；429（达到请求、配额或并发上限）；503（可靠存储或受控服务不可用，不能按空结果处理）。写操作不自动重试，冲突须显式核对。流程：读取当前队列，提交单一控制，再查询确认。SSE 断流不代替停止，未知结果不自动重放。未装配的 Node 接口只描述协议用途。控制动作一次只表达合同允许的暂停、恢复或先暂停再停止，不要拆成客户端自行重试的多步写。\n\n补充约束：follow-up-input/1.0；业务固定应用，复用当前登录认证，不接收客户端appId或可信身份。"
+      }
+    },
+    "/conversations/{id}/summary": {
+      "get": {
+        "operationId": "getConversationSummary",
+        "summary": "读取展示用摘要且不触发生成",
+        "description": "用途：读取业务会话展示摘要，不生成。不调用工具、知识、界面或委托，不写聊天与跟进，读取也不会自动生成。身份：须为原始可信用户，并满足会话所有权、纪元与 READ_HISTORY。传输使用 businessBearer 或带 CSRF 的 businessCookie。模型、Context、appId 不是身份，管理者不能旁路正文。请求：路径 id。响应：200 为已保存摘要，不代表可以跳过生成配额规则。错误：400、401、403、404、409、412、429、503 结构化错误。显式生成才消耗正常模型配额与计费。默认标题生成保护手工标题，与本只读接口无关。流程：展示前读取；没有摘要时调用生成接口并轮询元数据操作。未装配时不声称生产已验收。\n\n补充约束：要求原可信用户、会话所有权、有效权限代次和 READ_HISTORY。元数据运行不使用工具、知识、UI 或委派，不追加聊天消息或跟进副作用；读取不会自动生成。显式生成消耗正常模型配额并独立计费。标题默认保护手动命名；即使 overwrite=true，也不能覆盖生成期间新增的手动编辑。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "请求成功；响应数据结构见对应内容类型。",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "响应缓存控制指令；no-store表示不得缓存当前响应。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummaryContent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "generateConversationSummary",
+        "summary": "生成并持久化展示用摘要",
+        "description": "用途：显式生成并持久化业务会话展示摘要，正文 ConversationSummaryGenerate，202 返回 ConversationMetadataOperation，须轮询完成。不产生工具、知识、界面、委托、聊天或跟进副作用。身份：原始可信用户，具备所有权、纪元与 READ_HISTORY；businessBearer 或配置命名且带 CSRF 的 Cookie。模型、Context、appId 不是授权，管理者无正文旁路。请求：路径 id，必填幂等键，1 至 128 且为可打印 ASCII，表示一次稳定生成意图。响应：202，Cache-Control no-store，受理不是摘要已可读。错误：合同列出的结构化响应包括400（请求字段或格式非法）；401（认证缺失或失效）；403（角色、作用域或当前业务权限不允许）；404（目标不存在或对当前身份不可见）；409（资源状态或业务前置条件冲突，须核对当前事实）；429（达到请求、配额或并发上限）；502（依结构化错误说明处理）；503（可靠存储或受控服务不可用，不能按空结果处理）。不明结果只重放同一键，禁止隐含写重试。生成消耗正常配额与计费。流程：保存操作标识并查询元数据操作，完成后再读摘要。轮询失败不换新幂等键重发，除非已确认上次受理未知且仍使用原键。\n\n补充约束：要求原可信用户、会话所有权、有效权限代次和 READ_HISTORY。元数据运行不使用工具、知识、UI 或委派，不追加聊天消息或跟进副作用；读取不会自动生成。显式生成消耗正常模型配额并独立计费。标题默认保护手动命名；即使 overwrite=true，也不能覆盖生成期间新增的手动编辑。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[!-~]+$"
+            },
+            "description": "同一稳定生成意图使用同一幂等键；受理结果未知时用原键核对，不隐式重试写入。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "生成操作已受理；通过元数据操作查询接口读取是否完成。",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "响应缓存控制指令；no-store表示不得缓存当前响应。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationMetadataOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationSummaryGenerate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/title/generate": {
+      "post": {
+        "operationId": "generateConversationTitle",
+        "summary": "生成并持久化 AI 标题",
+        "description": "用途：显式生成并保存业务会话 AI 标题。默认保护手工标题；overwrite 为 true 仍不能替换生成期间发生的人工编辑。不触发工具、知识、界面、委托、聊天或跟进。身份：原始可信用户，满足所有权、纪元和 READ_HISTORY，使用 businessBearer 或带 CSRF 的 businessCookie。模型、Context、appId 不是身份，管理者不能旁路正文。请求：路径 id，必填稳定 Idempotency-Key（1 至 128，可打印 ASCII）和生成正文。响应：202 返回 ConversationMetadataOperation，no-store，须轮询完成。错误：合同列出的结构化响应包括400（请求字段或格式非法）；401（认证缺失或失效）；403（角色、作用域或当前业务权限不允许）；404（目标不存在或对当前身份不可见）；409（资源状态或业务前置条件冲突，须核对当前事实）；429（达到请求、配额或并发上限）；502（依结构化错误说明处理）；503（可靠存储或受控服务不可用，不能按空结果处理）。受理不明时重放同一键，写操作不自动重试。生成计入正常模型配额与计费。流程：轮询元数据操作至终态，再读取会话确认标题。未装配只说明协议。\n\n补充约束：要求原可信用户、会话所有权、有效权限代次和 READ_HISTORY。元数据运行不使用工具、知识、UI 或委派，不追加聊天消息或跟进副作用；读取不会自动生成。显式生成消耗正常模型配额并独立计费。标题默认保护手动命名；即使 overwrite=true，也不能覆盖生成期间新增的手动编辑。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[!-~]+$"
+            },
+            "description": "同一稳定生成意图使用同一幂等键；受理结果未知时用原键核对，不隐式重试写入。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "生成操作已受理；通过元数据操作查询接口读取是否完成。",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "响应缓存控制指令；no-store表示不得缓存当前响应。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationMetadataOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationTitleGenerate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/metadata-operations/{operationId}": {
+      "get": {
+        "operationId": "getConversationMetadataOperation",
+        "summary": "读取会话元数据操作",
+        "description": "用途：查询业务会话上一次摘要或标题生成的元数据操作，确认异步受理是否完成。本接口不生成、不调用工具、知识、界面、委托，不写聊天或跟进，读取也不自动生成。身份：原始可信用户，要求所有权、纪元与 READ_HISTORY；businessBearer 或必须带业务 CSRF 的 Cookie。操作标识、模型、Context、appId 不是授权，管理者无正文旁路。请求：路径 id 与 operationId。响应：200 为操作状态，未完成不等于摘要或标题已持久化。错误：400、401、403、404、409、412、429、503 结构化错误。流程：生成接口返回 202 后轮询本接口，终态后再读取摘要或标题。不要因轮询失败而自动重放生成，除非使用原幂等键且确认受理不明。未装配不声称已验收。\n\n补充约束：要求原可信用户、会话所有权、有效权限代次和 READ_HISTORY。元数据运行不使用工具、知识、UI 或委派，不追加聊天消息或跟进副作用；读取不会自动生成。显式生成消耗正常模型配额并独立计费。标题默认保护手动命名；即使 overwrite=true，也不能覆盖生成期间新增的手动编辑。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标元数据操作标识，仅用于定位当前授权作用域内的记录，不构成身份或权限。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "请求成功；响应数据结构见对应内容类型。",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "响应缓存控制指令；no-store表示不得缓存当前响应。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationMetadataOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/archive": {
+      "post": {
+        "operationId": "archiveConversation",
+        "summary": "持久归档会话",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "状态已持久保存",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "不缓存当前用户会话"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationArchival"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：持久归档业务会话，正文 ConversationArchivalRequest，200 返回 ConversationArchival，Cache-Control no-store，不缓存当前用户会话，也不自动删除历史。身份：只允许会话所有者；businessBearer 或带 CSRF 的 businessCookie，Cookie 名由配置决定。恢复不绕过历史授权，归档同样不能扩大权限。id、模型、Context、appId 不是身份，管理者无正文旁路。请求：路径 id 为 1 至 128 位字母数字及 _ . -，加必填正文。响应：200 表示状态已持久保存。相同状态重复调用保持原归档时间。活动 Run 或 ACCEPTED 跟进阻塞归档。错误：default 继承底座错误码。客户端不自动重试，冲突须显式核对。流程：确认无活动 Run 与已受理跟进后提交，再读取归档状态。\n\n补充约束：只允许会话所有者；不自动删除历史。活动Run或ACCEPTED跟进阻塞归档；恢复不绕过历史授权。相同状态重复调用保持原归档时间；客户端不自动重试。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationArchivalRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/restore": {
+      "post": {
+        "operationId": "restoreConversation",
+        "summary": "恢复会话",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_.-]{1,128}$"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "状态已持久保存",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "不缓存当前用户会话"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationArchival"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "拒绝或失败；继承底座错误码",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：恢复已归档的业务会话，正文 ConversationArchivalRequest，200 返回 ConversationArchival，并设置 no-store，不缓存当前用户会话。不自动删除历史。身份：只允许会话所有者，且恢复不绕过历史授权。认证为 businessBearer，或名称由业务认证配置、必须带 CSRF 的 businessCookie。模型、Context、appId 与路径 id 不是授权依据，管理者没有业务正文旁路。请求：路径 id（1 至 128 位字母数字及 _ . -）和必填正文。响应：200 表示状态已持久保存。相同状态重复调用保持原归档时间。错误：default 拒绝或失败，继承底座错误码，不另造码。客户端不得自动重试，前提冲突必须显式核对。流程：确认历史授权仍有效后提交，再读取会话确认已恢复。未装配的 Node 接口只说明协议用途。\n\n补充约束：只允许会话所有者；不自动删除历史。活动Run或ACCEPTED跟进阻塞归档；恢复不绕过历史授权。相同状态重复调用保持原归档时间；客户端不自动重试。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationArchivalRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/suggestions": {
+      "post": {
+        "operationId": "generateConversationSuggestions",
+        "summary": "生成三个下一步意图",
+        "description": "用途：业务网关代理生成三个下一步意图。身份：复用当前登录、Origin和CSRF，不向浏览器暴露平台令牌。请求：id和Idempotency-Key，正文仅protocolVersion=1.0。响应：202元数据操作、no-store，kind=SUGGESTIONS。错误：400非法输入、401未登录、403权限拒绝、404不可见、409冲突、429配额不足、502非法上游回执、503服务不可用。流程：只代理一次POST，调用方轮询已有metadata-operations接口；成功且stale=false才显示三个建议，点击或编辑由用户发起，不自动执行。默认关闭，可选开启需两端SDK与平台配套升级。",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "目标资源或记录的稳定标识，须属于当前授权作用域。"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[!-~]+$"
+            },
+            "description": "同一稳定生成意图使用同一幂等键；受理结果未知时用原键核对，不隐式重试写入。"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "生成操作已受理；通过元数据操作查询接口读取是否完成。",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "响应缓存控制指令；no-store表示不得缓存当前响应。"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationMetadataOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化错误；通过 error.code 判断原因，不能据此自动重放写操作。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationSuggestionsGenerate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{runId}/artifacts/{artifactId}/content": {
+      "get": {
+        "operationId": "downloadArtifact",
+        "summary": "重新授权下载用户生成的PDF成果",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "description": "生成文件的运行标识，不是授权依据。",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "artifactId",
+            "in": "path",
+            "required": true,
+            "description": "文件成果标识，不是公开访问凭据。",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已授权的PDF文件，不缓存。",
+            "headers": {
+              "Cache-Control": {
+                "description": "固定no-store。",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "description": "附件下载与UTF-8文件名。",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "description": "固定nosniff。",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary",
+                  "description": "已保存的PDF原始字节，最多8MiB。"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "下载被拒绝或不可用；不会自动生成或重试文件。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "下载被拒绝或不可用；不会自动生成或重试文件。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "下载被拒绝或不可用；不会自动生成或重试文件。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "下载被拒绝或不可用；不会自动生成或重试文件。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "下载被拒绝或不可用；不会自动生成或重试文件。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "下载被拒绝或不可用；不会自动生成或重试文件。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "用途：下载已经生成并保存的PDF文件。\n身份：当前业务用户，平台重新核验运行所有者及业务和历史来源权限。\n请求：GET路径包含runId与artifactId，不接收文件路径、外部URL或请求正文。\n响应：200为application/pdf，附件下载，最多8MiB，no-store。\n错误：401/403表示认证或权限拒绝，404表示不可见文件；503表示暂不可用，不自动生成或重放。\n流程：用户明确要求报告，平台托管工具生成并保存，读取会话artifacts，再用此接口下载。业务文件storage=business由业务下载和预览地址处理，不使用此平台内容接口。"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "businessBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "businessCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "business-session",
+        "description": "名称由业务认证配置；必须使用业务CSRF保护，SDK可传CSRF头"
+      }
+    },
+    "schemas": {
+      "ConversationCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 128,
+            "default": "",
+            "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 最多字符数128；声明的缺省值见default，服务端是否补齐遵循操作规则。"
+          }
+        }
+      },
+      "ConversationRename": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+          }
+        }
+      },
+      "ConfirmationDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "confirmationId",
+          "decision"
+        ],
+        "properties": {
+          "confirmationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "确认单、确认决策、确认响应或 Agent 事件中的确认标识，把一次待确认动作关联起来。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "description": "确认结论，取值为 approve 或 reject。用于 Confirmation、ConfirmationDecision 与 ConfirmationResponse，表示本次确认被同意或拒绝，不表示后续执行已经完成。 在所属结构适用时为必填项；允许值：\"approve\"、\"reject\"。"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "错误、Agent 事件、发布错误、兼容性错误或警告中的错误码。远端模型错误取 MODEL_UNAVAILABLE、MODEL_TIMED_OUT、MODEL_RATE_LIMITED、MODEL_AUTH_FAILED、MODEL_REQUEST_REJECTED、MODEL_FEATURE_UNSUPPORTED、MODEL_PROTOCOL_ERROR。 在所属结构适用时为必填项。"
+              },
+              "message": {
+                "type": "string",
+                "description": "聊天请求中的消息对象，或错误、事件、发布计划与兼容性报告中的说明文字，语义随所在对象而定。 在所属结构适用时为必填项。"
+              }
+            },
+            "description": "结构化错误对象。用于接口错误、远程模型失败、知识回调错误、批量项、摄取任务和向量构建任务，承载失败信息；出现错误不表示整体受理已完成。 在所属结构适用时为必填项。"
+          }
+        }
+      },
+      "Conversation": {
+        "required": [
+          "id",
+          "title",
+          "messages"
+        ],
+        "properties": {
+          "messages": {
+            "items": {
+              "required": [
+                "role",
+                "content"
+              ],
+              "properties": {
+                "errorCode": {
+                  "type": "string",
+                  "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。"
+                },
+                "runId": {
+                  "type": "string",
+                  "description": "Agent 事件、工具执行、业务身份、权限回调、模型调用或远端模型请求所归属的运行标识，把记录关联到同一次运行。"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。 在所属结构适用时为必填项。"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。"
+                },
+                "role": {
+                  "enum": [
+                    "user",
+                    "assistant"
+                  ],
+                  "description": "角色。令牌和业务身份取 USER 或 APP_ADMIN，权限回调还可为 PLATFORM_ADMIN；消息和工具执行中是该侧角色。 在所属结构适用时为必填项；允许值：\"user\"、\"assistant\"。"
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "服务端分配的会话消息标识。编辑必须使用会话投影中的 message.messageId，不能由客户端编造。"
+                },
+                "createdAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "服务端持久化UTC毫秒时间；旧历史缺失时不推算"
+                },
+                "completedAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "服务端持久化UTC毫秒时间；旧历史缺失时不推算"
+                }
+              },
+              "type": "object"
+            },
+            "maxItems": 20,
+            "type": "array",
+            "description": "本页已保存消息，按时间正序排列，每页最多20条；完整历史通过nextBefore逐页读取。"
+          },
+          "updatedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "文档访问、模型健康、配额配置、摄入任务、向量构建任务或告警规则的最近更新时刻，整数时间点。 最小值0。"
+          },
+          "id": {
+            "type": "string",
+            "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "运行、工具执行、发布记录、模型调用、模型探测或配额预留的创建时刻，整数时间。 最小值0。"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 在所属结构适用时为必填项；最多字符数128。"
+          },
+          "archivedAt": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "会话或归档记录的归档时刻，整数时间。未归档为 null，不表示时间零点；缺失的旧历史不另行推算。 最小值0。"
+          },
+          "nextBefore": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{16}:[1-9][0-9]{0,15}$",
+            "description": "读取更早消息使用的不透明游标；null表示最早页，不能自行计算。"
+          }
+        },
+        "type": "object"
+      },
+      "ConversationRenamed": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 在所属结构适用时为必填项。"
+          },
+          "id": {
+            "type": "string",
+            "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+          }
+        },
+        "type": "object"
+      },
+      "ConversationDeleted": {
+        "required": [
+          "id",
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "const": true,
+            "description": "删除结果，语义随上下文变化：审计保留回执为删除数量，保留清扫为删除结果对象，告警规则、会话、知识文档和摄取任务删除为是否已删除。数量或真值都不表示其他资源已被清理。 在所属结构适用时为必填项；固定值：true。"
+          },
+          "id": {
+            "type": "string",
+            "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+          }
+        },
+        "type": "object"
+      },
+      "ConfirmationResponse": {
+        "required": [
+          "confirmationId",
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "description": "确认结论，取值为 approve 或 reject。用于 Confirmation、ConfirmationDecision 与 ConfirmationResponse，表示本次确认被同意或拒绝，不表示后续执行已经完成。 在所属结构适用时为必填项；允许值：\"approve\"、\"reject\"。"
+          },
+          "confirmationId": {
+            "type": "string",
+            "description": "确认单、确认决策、确认响应或 Agent 事件中的确认标识，把一次待确认动作关联起来。 在所属结构适用时为必填项。"
+          }
+        },
+        "type": "object"
+      },
+      "ChatRequest": {
+        "type": "object",
+        "properties": {
+          "protocolVersion": {
+            "const": "1.0",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          },
+          "appId": {
+            "type": "string",
+            "description": "兼容字段；可省略，不能与部署绑定应用不一致。"
+          },
+          "agentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。"
+          },
+          "agentVersion": {
+            "type": "string",
+            "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+          },
+          "conversationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "对话请求、运行、Agent 事件、后续跟进或会话摘要内容中的会话标识。对话请求可为 null，表示尚未指定会话。"
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "const": "user",
+                "description": "角色。令牌和业务身份取 USER 或 APP_ADMIN，权限回调还可为 PLATFORM_ADMIN；消息和工具执行中是该侧角色。 在所属结构适用时为必填项；固定值：\"user\"。"
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16384,
+                "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。 在所属结构适用时为必填项；最少字符数1；最多字符数16384。"
+              }
+            },
+            "required": [
+              "role",
+              "content"
+            ],
+            "additionalProperties": false,
+            "description": "聊天请求中的消息对象，或错误、事件、发布计划与兼容性报告中的说明文字，语义随所在对象而定。 在所属结构适用时为必填项。"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "对话、可信上下文或后续跟进携带的上下文对象。它是业务上下文快照，遵守各自大小与深度限制，不是身份认证。"
+          },
+          "client": {
+            "type": "object",
+            "properties": {
+              "platform": {
+                "type": "string",
+                "description": "聊天、消息编辑或问卷回答请求里客户端声明的运行平台标识，只描述客户端环境，不是可信身份。"
+              },
+              "uiCapabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "聊天、后续输入、消息编辑或问卷回答里客户端声明的界面能力列表，只描述客户端能展示什么，不是身份或权限。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "对话请求、消息编辑或输入回答携带的客户端信息对象。编辑或回答中若省略，则沿用源运行上的客户端块。"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "ConversationSummaryContent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "protocolVersion": {
+            "const": "1.0",
+            "type": "string",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "对话请求、运行、Agent 事件、后续跟进或会话摘要内容中的会话标识。对话请求可为 null，表示尚未指定会话。 在所属结构适用时为必填项。"
+          },
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 6000,
+            "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。 在所属结构适用时为必填项；最少字符数1；最多字符数6000。"
+          },
+          "generatedAt": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "生成时刻。运维状态表示这份状态何时生成；会话摘要可为 null，null 表示尚未生成，不是 0。 在所属结构适用时为必填项；最小值0。"
+          },
+          "sourceHash": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "会话摘要所依据原文的摘要值。可为字符串；为 null 表示没有原文摘要，不能当成空串或零。 在所属结构适用时为必填项。"
+          },
+          "messageCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "会话摘要所覆盖的消息条数。 在所属结构适用时为必填项；最小值0；最大值20。"
+          },
+          "scope": {
+            "const": "RECENT_WINDOW_WITH_DIGEST",
+            "type": "string",
+            "description": "模型或 Provider 的作用域标识。出现在绑定定义、模型事件、兼容性检查和模型调用上，用来区分模型或供应商所属范围，不是租户身份。 在所属结构适用时为必填项；固定值：\"RECENT_WINDOW_WITH_DIGEST\"。"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "会话摘要是否已过时。为真表示摘要所依据的内容已落后于当前会话，不能再当作最新摘要。 在所属结构适用时为必填项。"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "conversationId",
+          "content",
+          "generatedAt",
+          "sourceHash",
+          "messageCount",
+          "scope",
+          "stale"
+        ],
+        "description": "单份持久化的展示摘要，按需读取，不触发模型调用。空摘要的 content、generatedAt、sourceHash 均为 null，messageCount 为 0，stale 为 false。生成范围最多包含最近 20 条成功消息及有界内部摘要；stale 表示与当前成功历史来源相比是否已过时。",
+        "oneOf": [
+          {
+            "properties": {
+              "content": {
+                "type": "null",
+                "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。"
+              },
+              "generatedAt": {
+                "type": "null",
+                "description": "生成时刻。运维状态表示这份状态何时生成；会话摘要可为 null，null 表示尚未生成，不是 0。"
+              },
+              "sourceHash": {
+                "type": "null",
+                "description": "会话摘要所依据原文的摘要值。可为字符串；为 null 表示没有原文摘要，不能当成空串或零。"
+              },
+              "messageCount": {
+                "const": 0,
+                "description": "会话摘要所覆盖的消息条数。 固定值：0。"
+              },
+              "stale": {
+                "const": false,
+                "description": "会话摘要是否已过时。为真表示摘要所依据的内容已落后于当前会话，不能再当作最新摘要。 固定值：false。"
+              }
+            }
+          },
+          {
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。"
+              },
+              "generatedAt": {
+                "type": "integer",
+                "description": "生成时刻。运维状态表示这份状态何时生成；会话摘要可为 null，null 表示尚未生成，不是 0。"
+              },
+              "sourceHash": {
+                "type": "string",
+                "description": "会话摘要所依据原文的摘要值。可为字符串；为 null 表示没有原文摘要，不能当成空串或零。"
+              }
+            }
+          }
+        ]
+      },
+      "ConversationGeneratedTitle": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+          },
+          "source": {
+            "type": "string",
+            "const": "AI",
+            "description": "来源标识。知识文档项为文档来源；检索事件为命中来源；可信上下文结果为上下文来源；费用上的 source 说明费用配置来源，不是供应商账单。 在所属结构适用时为必填项；固定值：\"AI\"。"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source"
+        ]
+      },
+      "ConversationMetadataOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "protocolVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          },
+          "id": {
+            "type": "string",
+            "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "对话请求、运行、Agent 事件、后续跟进或会话摘要内容中的会话标识。对话请求可为 null，表示尚未指定会话。 在所属结构适用时为必填项。"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "SUMMARY",
+              "TITLE"
+            ],
+            "description": "对象类别。权限回调与发布资源使用 agents、tools、knowledge、ui-capabilities 等协议枚举；评估断言与托管定义表示该对象自身种类。 在所属结构适用时为必填项；允许值：\"SUMMARY\"、\"TITLE\"。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "WAITING_CONFIRMATION",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "TIMED_OUT"
+            ],
+            "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项；允许值：\"QUEUED\"、\"RUNNING\"、\"WAITING_CONFIRMATION\"、\"SUCCEEDED\"、\"FAILED\"、\"CANCELLED\"、\"TIMED_OUT\"。"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConversationSummaryContent"
+              },
+              {
+                "$ref": "#/components/schemas/ConversationGeneratedTitle"
+              }
+            ],
+            "description": "结果载荷。助手事件、入库任务和向量构建各用对应结果对象；会话元数据中为摘要或标题，未成功时可为 null。 在所属结构适用时为必填项。"
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+            "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。 在所属结构适用时为必填项。"
+          }
+        },
+        "required": [
+          "protocolVersion",
+          "id",
+          "conversationId",
+          "kind",
+          "status",
+          "result",
+          "errorCode"
+        ],
+        "description": "已受理、独立计量的 BUSINESS 元数据操作，不是聊天消息。只有 SUCCEEDED 状态携带与 kind 对应的非空 result，其他状态的 result 为 null；成功或待处理状态的 errorCode 为 null。TITLE 遵守手动标题修订保护；成功历史来源发生变化时以 CONVERSATION_CHANGED 失败。",
+        "oneOf": [
+          {
+            "properties": {
+              "kind": {
+                "const": "SUMMARY",
+                "description": "对象类别。权限回调与发布资源使用 agents、tools、knowledge、ui-capabilities 等协议枚举；评估断言与托管定义表示该对象自身种类。 固定值：\"SUMMARY\"。"
+              },
+              "status": {
+                "const": "SUCCEEDED",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 固定值：\"SUCCEEDED\"。"
+              },
+              "errorCode": {
+                "type": "null",
+                "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。"
+              },
+              "result": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ConversationSummaryContent"
+                  },
+                  {
+                    "properties": {
+                      "content": {
+                        "type": "string",
+                        "description": "对话消息、远端模型消息、知识条目或引用预览中的正文。远端消息在部分分支可为 null，表示没有正文。"
+                      }
+                    }
+                  }
+                ],
+                "description": "结果载荷。助手事件、入库任务和向量构建各用对应结果对象；会话元数据中为摘要或标题，未成功时可为 null。"
+              }
+            }
+          },
+          {
+            "properties": {
+              "kind": {
+                "const": "TITLE",
+                "description": "对象类别。权限回调与发布资源使用 agents、tools、knowledge、ui-capabilities 等协议枚举；评估断言与托管定义表示该对象自身种类。 固定值：\"TITLE\"。"
+              },
+              "status": {
+                "const": "SUCCEEDED",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 固定值：\"SUCCEEDED\"。"
+              },
+              "errorCode": {
+                "type": "null",
+                "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。"
+              },
+              "result": {
+                "$ref": "#/components/schemas/ConversationGeneratedTitle",
+                "description": "结果载荷。助手事件、入库任务和向量构建各用对应结果对象；会话元数据中为摘要或标题，未成功时可为 null。 具体结构见引用#/components/schemas/ConversationGeneratedTitle。"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "QUEUED",
+                  "RUNNING",
+                  "WAITING_CONFIRMATION"
+                ],
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 允许值：\"QUEUED\"、\"RUNNING\"、\"WAITING_CONFIRMATION\"。"
+              },
+              "errorCode": {
+                "type": "null",
+                "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。"
+              },
+              "result": {
+                "type": "null",
+                "description": "结果载荷。助手事件、入库任务和向量构建各用对应结果对象；会话元数据中为摘要或标题，未成功时可为 null。"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "FAILED",
+                  "CANCELLED",
+                  "TIMED_OUT"
+                ],
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 允许值：\"FAILED\"、\"CANCELLED\"、\"TIMED_OUT\"。"
+              },
+              "result": {
+                "type": "null",
+                "description": "结果载荷。助手事件、入库任务和向量构建各用对应结果对象；会话元数据中为摘要或标题，未成功时可为 null。"
+              }
+            }
+          }
+        ]
+      },
+      "ConversationSummaryGenerate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "protocolVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          }
+        },
+        "required": [
+          "protocolVersion"
+        ]
+      },
+      "ConversationTitleGenerate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "protocolVersion": {
+            "type": "string",
+            "const": "1.0",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false,
+            "description": "生成会话标题时是否覆盖已有标题。 声明的缺省值见default，服务端是否补齐遵循操作规则。"
+          }
+        },
+        "required": [
+          "protocolVersion"
+        ]
+      },
+      "ConversationArchivalRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocolVersion"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "const": "1.0",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          }
+        }
+      },
+      "ConversationArchival": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocolVersion",
+          "id",
+          "archived",
+          "archivedAt"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "const": "1.0",
+            "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+          },
+          "id": {
+            "type": "string",
+            "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "运行或会话归档状态是否已归档。只表示归档标记，不表示内容已被删除。 在所属结构适用时为必填项。"
+          },
+          "archivedAt": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "会话或归档记录的归档时刻，整数时间。未归档为 null，不表示时间零点；缺失的旧历史不另行推算。 在所属结构适用时为必填项；最小值0；最大值9007199254740991。"
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "archived": {
+                "const": true,
+                "description": "运行或会话归档状态是否已归档。只表示归档标记，不表示内容已被删除。 固定值：true。"
+              },
+              "archivedAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "服务端持久化UTC毫秒时间；旧历史缺失时不推算"
+              }
+            }
+          },
+          {
+            "properties": {
+              "archived": {
+                "const": false,
+                "description": "运行或会话归档状态是否已归档。只表示归档标记，不表示内容已被删除。 固定值：false。"
+              },
+              "archivedAt": {
+                "type": "null",
+                "description": "会话或归档记录的归档时刻，整数时间。未归档为 null，不表示时间零点；缺失的旧历史不另行推算。"
+              }
+            }
+          }
+        ]
+      },
+      "ConversationSuggestionsGenerate": {
+        "$ref": "./openapi.json#/components/schemas/ConversationSuggestionsGenerate",
+        "description": "复用平台下一步意图合同；字段限制与权限规则不在业务代理中扩展。"
+      },
+      "ConversationSuggestions": {
+        "$ref": "./openapi.json#/components/schemas/ConversationSuggestions",
+        "description": "复用平台下一步意图合同；字段限制与权限规则不在业务代理中扩展。"
+      }
+    }
+  }
+}

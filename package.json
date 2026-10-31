@@ -1,16 +1,17 @@
 {
   "name": "sparktide-docs",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs && node scripts/legacy-routes.mjs",
+    "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "docs:check": "node scripts/check-site.mjs && node scripts/check-docs-design.mjs",
+    "docs:check": "node scripts/check-site.mjs && node scripts/check-docs-design.mjs && node scripts/check-code-groups.mjs",
+    "docs:examples": "python scripts/package-examples.py",
     "docs:api": "node scripts/generate-reference.mjs",
-    "docs:examples": "python scripts/package-tutorial.py",
-    "docs:check:design": "node scripts/check-docs-design.mjs"
+    "docs:check:design": "node scripts/check-docs-design.mjs",
+    "docs:skills": "python scripts/package-skills.py"
   },
   "devDependencies": {
     "vitepress": "1.6.4"

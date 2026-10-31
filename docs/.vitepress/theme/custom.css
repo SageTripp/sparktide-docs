@@ -41,22 +41,20 @@
 }
 .VPNavBarTitle .logo { width: 32px; height: 32px; object-fit: contain; border-radius: 5px; background: white; }
 .VPNavBarTitle .title { font-size: 15px; letter-spacing: -.25px; }
-.VPNavBar { border-bottom: 1px solid var(--vp-c-divider); }
+.VPNavBar { border-bottom: 0; }
 .VPNavBar .divider { display: none; }
 .VPNavBarMenuLink, .VPNavBarMenuGroup .button { font-size: 13px; }
 .VPNavBarSearch .DocSearch-Button { border: 1px solid var(--vp-c-divider); border-radius: 7px; background: var(--vp-c-bg); }
-.VPSidebar { border-right: 1px solid var(--vp-c-divider); }
+.Layout .VPSidebar { border-right: 0; background: var(--vp-c-bg); }
 .VPSidebarItem.level-0 { padding-bottom: 18px; }
 .VPSidebarItem.level-0 > .item > .text { color: var(--vp-c-text-3); font-size: 11px; font-weight: 650; letter-spacing: .7px; }
-.VPSidebarItem.level-1 > .item { border-radius: 5px; padding-left: 10px; margin-left: -10px; }
+.VPSidebarItem.level-1 > .item { border-radius: 6px; padding: 3px 12px; margin: 2px -12px; }
 .VPSidebarItem.level-1.is-active > .item { background: var(--vp-c-brand-soft); }
-.VPSidebarItem .text { font-size: 13px; line-height: 22px; }
+.VPSidebarItem .text { font-size: 14px; line-height: 24px; }
 .VPSidebarItem.is-link > .item:hover .link > .text { color: var(--vp-c-brand-1); }
 .VPSidebarItem.level-1 > .items { padding-left: 12px; }
 .VPSidebarItem.level-2 .text { font-size: 12px; }
 .VPSidebar .group + .group { border-top: 0; padding-top: 0; }
-.sidebar-caption { margin: 22px 0 20px; font-size: 10px; font-weight: 650; color: var(--vp-c-text-3); letter-spacing: 1.3px; }
-.sidebar-caption span { margin-left: 6px; color: var(--st-accent); }
 .VPDoc .content-container { max-width: 760px; }
 .VPDocAsideOutline .content { border-left: 1px solid var(--vp-c-divider); }
 .VPDocAsideOutline .outline-title { font-size: 11px; font-weight: 600; letter-spacing: .3px; }
@@ -212,3 +210,45 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--vp-c-brand-1); 
 .text-action .link-icon { margin-left: 7px; }
 .card-action > .link-icon { width: 16px; height: 16px; }
 @media (min-width: 1100px) { .VPLocalNav { display: none; } }
+
+@media(min-width:960px){.VPNavBarMenuLink{padding:0 9px!important}.VPNavBarSearch{flex-grow:1;min-width:40px}}
+/* 六个栏目在平板宽度改用原生折叠菜单，避免挤出版本入口。 */
+@media(max-width:959px){
+  .VPNavBarMenu,.VPNavBarExtra{display:none!important}
+  .VPNavBarHamburger{display:flex!important}
+  .VPNavScreen{display:block!important}
+}
+@media(min-width:960px) and (max-width:1199px){
+  .VPNavBarSearch .DocSearch-Button-Placeholder,.VPNavBarSearch .DocSearch-Button-Keys{display:none}
+  .VPNavBarSearch .DocSearch-Button{width:40px;padding:0;justify-content:center}
+}
+
+/* 品牌与版本组成一个入口，沿用主题菜单的键盘和点击行为。 */
+.VPNavBar .container > .title { display: none; }
+.Layout .VPNavBar.has-sidebar .wrapper { padding: 0 32px; }
+.Layout .VPNavBar.has-sidebar .container { max-width: calc(var(--vp-layout-max-width) - 64px); }
+.VPNavBar.has-sidebar .container > .content { padding: 0; }
+.docs-brand { display: flex; flex-shrink: 0; align-items: center; gap: 10px; margin-right: 28px; }
+.docs-brand-home { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 650; }
+.docs-brand-home img { border-radius: 5px; background: white; }
+.docs-version > .button { height: 44px; padding: 0 8px; }
+.docs-version .text { font-size: 12px; line-height: 28px; color: var(--vp-c-text-2); }
+.docs-version > .menu { left: 0; right: auto; top: 44px; }
+.VPSidebar .curtain { background: var(--vp-c-bg); }
+.VPSidebarItem.level-0 > .item > .text { font-size: 12px; letter-spacing: 0; color: var(--vp-c-text-2); }
+@media(min-width:960px){
+  .VPSidebar { padding-top: 88px; }
+}
+.docs-home .VPDoc .content-container { max-width: 1040px; }
+.docs-home .vp-doc h1 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -1px; }
+.docs-home .vp-doc h2 { border-top: 0; }
+.home-actions p { display: flex; flex-wrap: wrap; gap: 12px; }
+.home-actions a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 7px; background: var(--vp-c-bg-soft); text-decoration: none; font-size: 14px; }
+.home-actions a:first-child { color: var(--vp-c-bg); background: var(--vp-c-brand-1); font-weight: 600; }
+@media(max-width:959px){
+  .Layout .VPNavBar.has-sidebar .wrapper { padding: 0 16px; }
+  .docs-brand { margin-right: auto; gap: 4px; }
+  .VPNavBarSearch { flex-grow: 0; padding-left: 8px; }
+  .VPNavBarSearch .DocSearch-Button-Placeholder,.VPNavBarSearch .DocSearch-Button-Keys { display: none; }
+  .VPNavBarSearch .DocSearch-Button { width: 36px; padding: 0; justify-content: center; }
+}

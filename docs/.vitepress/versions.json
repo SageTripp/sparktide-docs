@@ -1,0 +1,16 @@
+{
+  "current": "0.2.0",
+  "versions": [
+    {
+      "id": "0.2.0",
+      "label": "0.2.0 · 当前开发版本",
+      "updated": "2026-10-31",
+      "status": "development",
+      "components": {
+        "platform": "0.2.0",
+        "backendSdkDefault": "0.2.0",
+        "frontendSdk": "0.2.0"
+      }
+    }
+  ]
+}

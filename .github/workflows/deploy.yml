@@ -33,6 +33,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Generate API reference from bundled contract
         run: npm run docs:api
+      - name: Package versioned Agent Skills
+        run: npm run docs:skills
       - name: Build
         env:
           DOCS_BASE: ${{ steps.pages.outputs.base_path }}/

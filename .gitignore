@@ -12,3 +12,8 @@ docs/.vitepress/cache/
 .env
 .env.*
 !.env.example
+
+.work/
+.agent/
+
+docs/.vitepress/.temp/

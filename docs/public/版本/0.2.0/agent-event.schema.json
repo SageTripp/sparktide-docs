@@ -1,0 +1,1883 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "启澜 AgentEvent 公共事件协议 1.0",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": "1.0",
+      "description": "聊天请求、Agent 事件、业务身份、权限回调或远端模型消息所声明的协议版本，标识报文遵循的合同版本。 在所属结构适用时为必填项；固定值：\"1.0\"。"
+    },
+    "event": {
+      "enum": [
+        "message.started",
+        "status.changed",
+        "text.delta",
+        "agent.started",
+        "agent.completed",
+        "tool.started",
+        "tool.completed",
+        "knowledge.retrieved",
+        "citation.created",
+        "ui.created",
+        "confirmation.required",
+        "usage.updated",
+        "error",
+        "message.completed",
+        "model.started",
+        "model.completed",
+        "knowledge.planned",
+        "knowledge.fused",
+        "citation.verified",
+        "reference.cited"
+      ],
+      "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 在所属结构适用时为必填项；允许值：\"message.started\"、\"status.changed\"、\"text.delta\"、\"agent.started\"、\"agent.completed\"、\"tool.started\"、\"tool.completed\"、\"knowledge.retrieved\"、\"citation.created\"、\"ui.created\"、\"confirmation.required\"、\"usage.updated\"、\"error\"、\"message.completed\"、\"model.started\"、\"model.completed\"、\"knowledge.planned\"、\"knowledge.fused\"、\"citation.verified\"。 reference.cited 表示正文实际引用的资料清单。"
+    },
+    "runId": {
+      "type": "string",
+      "description": "Agent 事件、工具执行、业务身份、权限回调、模型调用或远端模型请求所归属的运行标识，把记录关联到同一次运行。 在所属结构适用时为必填项。"
+    },
+    "traceId": {
+      "type": "string",
+      "description": "运行、错误、Agent 事件、业务身份、权限回调或远程模型请求上的轨迹标识，用于把同一次处理串起来。它是关联号，可丢的观测轨迹不能代替可靠运行记录。 在所属结构适用时为必填项。"
+    },
+    "conversationId": {
+      "type": "string",
+      "description": "对话请求、运行、Agent 事件、后续跟进或会话摘要内容中的会话标识。对话请求可为 null，表示尚未指定会话。 在所属结构适用时为必填项。"
+    },
+    "messageId": {
+      "type": "string",
+      "description": "服务端分配的会话消息标识。编辑必须使用会话投影中的 message.messageId，不能由客户端编造。 在所属结构适用时为必填项。"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Agent 事件在所属流中的顺序号，整数，用于排列同一轨迹中的事件先后，不是全局唯一标识。 在所属结构适用时为必填项；最小值1。"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。 在所属结构适用时为必填项。"
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "event",
+    "runId",
+    "traceId",
+    "conversationId",
+    "messageId",
+    "sequence",
+    "data"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "message.started",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"message.started\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项。"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "status.changed",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"status.changed\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项。"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "text.delta",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"text.delta\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "文本正文。可指知识文档原文、模型增量文本、Agent 结果文本，或托管文档内容与导入文本，语义随所在对象而定。 在所属结构适用时为必填项。"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "agent.started",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"agent.started\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "agent.completed",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"agent.completed\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "status": {
+                "type": "string",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              },
+              "result": {
+                "$ref": "#/$defs/AgentResult",
+                "description": "结果载荷。助手事件、入库任务和向量构建各用对应结果对象；会话元数据中为摘要或标题，未成功时可为 null。 具体结构见引用#/$defs/AgentResult。"
+              },
+              "usage": {
+                "$ref": "#/$defs/AgentBudgetUsage",
+                "description": "用量对象。运行上为用量结构；预算类事件引用 AgentBudgetUsage；模型调用与探测引用 ModelProviderUsage。模型事件上可为 null，表示没有用量，不能当成全零。费用未知也不等于 0。 具体结构见引用#/$defs/AgentBudgetUsage。"
+              },
+              "errorCode": {
+                "type": "string",
+                "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "status"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "tool.started",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"tool.started\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "callId": {
+                "type": "string",
+                "description": "Agent 事件数据中一次调用的标识，用于关联该调用的相关事件。 在所属结构适用时为必填项。"
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Agent 工具事件或工具执行记录上的工具标识，标明涉及哪一个已定义工具。 在所属结构适用时为必填项。"
+              },
+              "version": {
+                "type": "string",
+                "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+              },
+              "effect": {
+                "enum": [
+                  "READ",
+                  "COMPUTE",
+                  "WRITE",
+                  "DANGEROUS"
+                ],
+                "description": "工具副作用类别，取值为 READ、COMPUTE、WRITE 或 DANGEROUS。用于工具定义、智能体事件和工具执行，声明影响级别，不表示调用已获批准。 在所属结构适用时为必填项；允许值：\"READ\"、\"COMPUTE\"、\"WRITE\"、\"DANGEROUS\"。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "callId",
+              "toolId",
+              "version",
+              "effect"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "tool.completed",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"tool.completed\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "callId": {
+                "type": "string",
+                "description": "Agent 事件数据中一次调用的标识，用于关联该调用的相关事件。 在所属结构适用时为必填项。"
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Agent 工具事件或工具执行记录上的工具标识，标明涉及哪一个已定义工具。 在所属结构适用时为必填项。"
+              },
+              "status": {
+                "type": "string",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "callId",
+              "toolId",
+              "status"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "knowledge.retrieved",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"knowledge.retrieved\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "knowledgeId": {
+                "type": "string",
+                "description": "知识资源标识，用于检索事件、知识回调、引用预览、摄入作业和知识调试，指明所操作的知识对象。 在所属结构适用时为必填项。"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "整数次数。知识检索或融合事件中是条目数；观测操作中是该操作的发生次数，不是上限。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              },
+              "knowledgeVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "知识资源版本标识，把事件、引用预览、摄入文件与作业、向量构建绑定到具体版本。 最少字符数1；最多字符数64。"
+              },
+              "status": {
+                "enum": [
+                  "SUCCEEDED",
+                  "EMPTY",
+                  "FAILED"
+                ],
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 允许值：\"SUCCEEDED\"、\"EMPTY\"、\"FAILED\"。"
+              },
+              "errorCode": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。 最少字符数1；最多字符数128。"
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Agent 事件中一次知识检索的标识，用于把检索相关事件关联到同一次检索。 最少字符数1；最多字符数128。"
+              },
+              "selectionReason": {
+                "enum": [
+                  "MODEL_REQUEST",
+                  "EAGER",
+                  "RULE_ALWAYS",
+                  "TRUSTED_CONTEXT",
+                  "QUERY_MATCH",
+                  "TAG_MATCH",
+                  "DESCRIPTION_TAG_MATCH"
+                ],
+                "description": "工具、知识或模型被选中的原因。工具选择可为 MODEL_REQUEST、EAGER、RULE_ALWAYS、TRUSTED_CONTEXT、QUERY_MATCH、TAG_MATCH、DESCRIPTION_TAG_MATCH；模型侧为字符串原因。TRUSTED_CONTEXT 只说明依据可信上下文，不是身份证明。 允许值：\"MODEL_REQUEST\"、\"EAGER\"、\"RULE_ALWAYS\"、\"TRUSTED_CONTEXT\"、\"QUERY_MATCH\"、\"TAG_MATCH\"、\"DESCRIPTION_TAG_MATCH\"。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "knowledgeId",
+              "count"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "citation.created",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"citation.created\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "id": {
+                "type": "string",
+                "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+              },
+              "documentId": {
+                "type": "string",
+                "description": "知识文档标识。用于智能体事件、知识条目、引用预览、上传元数据、摄取任务和调试命中，用来指向一份文档，不是访问授权。 在所属结构适用时为必填项。"
+              },
+              "title": {
+                "type": "string",
+                "description": "知识文档、检索命中、知识条目或托管文档的标题文本，用于展示和识别，不是文档唯一标识。 在所属结构适用时为必填项。"
+              },
+              "source": {
+                "type": "string",
+                "description": "来源标识。知识文档项为文档来源；检索事件为命中来源；可信上下文结果为上下文来源；费用上的 source 说明费用配置来源，不是供应商账单。 在所属结构适用时为必填项。"
+              },
+              "knowledgeId": {
+                "type": "string",
+                "description": "知识资源标识，用于检索事件、知识回调、引用预览、摄入作业和知识调试，指明所操作的知识对象。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              },
+              "sourceRef": {
+                "$ref": "#/$defs/KnowledgeSource",
+                "description": "检索命中、引用预览或调试命中上的知识来源引用，类型为 KnowledgeSource，指向可回溯的文档或片段来源。 具体结构见引用#/$defs/KnowledgeSource。"
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "相关性或人工评分。知识条目、调试命中与评测命中为数值相关分；EvalManualScore 为整数人工分；Agent 事件中也可携带检索分。分值高低不表示已采纳。 最小值0；最大值1。"
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "最多 4096 UTF-8 字节、嵌套深度 8；有限 JSON 值。"
+              },
+              "itemId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "助手事件里被引用或返回的知识条目标识，用于把该事件定位到具体条目。 最少字符数1；最多字符数128。"
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Agent 事件中一次知识检索的标识，用于把检索相关事件关联到同一次检索。 最少字符数1；最多字符数128。"
+              },
+              "knowledgeVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "知识资源版本标识，把事件、引用预览、摄入文件与作业、向量构建绑定到具体版本。 最少字符数1；最多字符数64。"
+              },
+              "fusionScore": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "知识命中事件上的融合分数，表示多路检索结果合并后的数值得分，不是命中名次。 最小值0；最大值1。"
+              },
+              "chunkId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "Agent 事件、引用预览或知识评测命中中的文档分块标识。 最少字符数1；最多字符数160。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "id",
+              "documentId",
+              "title",
+              "source",
+              "knowledgeId"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "ui.created",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"ui.created\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "component": {
+                "type": "string",
+                "description": "Agent 事件或会话输入中的界面组件标识。会话输入中是阻塞卡片的界面能力标识，描述来自源运行。 在所属结构适用时为必填项。"
+              },
+              "version": {
+                "type": "string",
+                "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+              },
+              "props": {
+                "type": "object",
+                "description": "界面事件或会话输入上的界面属性对象。会话输入中的 props 是已通过 ui.created 发布、由服务端冻结的权威属性，答案按其校验，展示文本由其重建。 在所属结构适用时为必填项。"
+              },
+              "inputRequestId": {
+                "type": "string",
+                "description": "仅阻塞式 FORM/QUESTION 卡片携带；标识在本事件发布前已可靠创建的待回答输入。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "component",
+              "version",
+              "props"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "confirmation.required",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"confirmation.required\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "confirmationId": {
+                "type": "string",
+                "description": "确认单、确认决策、确认响应或 Agent 事件中的确认标识，把一次待确认动作关联起来。 在所属结构适用时为必填项。"
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Agent 工具事件或工具执行记录上的工具标识，标明涉及哪一个已定义工具。 在所属结构适用时为必填项。"
+              },
+              "version": {
+                "type": "string",
+                "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+              },
+              "arguments": {
+                "type": "object",
+                "description": "调用参数。事件和权限回调中为对象；远端工具调用中为参数字符串，工具增量中为参数片段。 在所属结构适用时为必填项。"
+              },
+              "argumentsHash": {
+                "type": "string",
+                "description": "Agent 事件或审计策略决策中参数内容的哈希，用于识别参数是否相同，不包含参数正文。 在所属结构适用时为必填项。"
+              },
+              "expiresAt": {
+                "type": "integer",
+                "description": "绝对失效时间戳。用于令牌、需确认事件、模型健康探测、委托凭据和应用或平台租约；到期表示不再有效，不是事项完成。 在所属结构适用时为必填项。"
+              }
+            },
+            "required": [
+              "confirmationId",
+              "toolId",
+              "version",
+              "arguments",
+              "argumentsHash",
+              "expiresAt"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "usage.updated",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"usage.updated\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "budgetUnits": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000,
+                "description": "Agent 事件或预算用量中累计的预算单位数，是消耗计数，不表示预算上限。 在所属结构适用时为必填项；最小值0；最大值1000000。"
+              },
+              "steps": {
+                "type": "integer",
+                "description": "预算用量中已计入的步骤数，出现在预算事件和 AgentBudgetUsage。它是计数，不是步骤上限，合同未声明到达某值会自动停止。 在所属结构适用时为必填项。"
+              },
+              "toolCalls": {
+                "type": "integer",
+                "description": "预算用量中已计入的工具调用次数，出现在预算事件和 AgentBudgetUsage。它是计数，合同未声明次数上限或自动重试。 在所属结构适用时为必填项。"
+              },
+              "providerUsage": {
+                "type": "object",
+                "description": "事件、对账、核算或配额预留中的供应商用量对象。对账要求完整整数用量，且 total_tokens 不得低于输入加输出；未知用量不是 0。 在所属结构适用时为必填项。"
+              },
+              "cost": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "source": {
+                    "const": "configured-pricing",
+                    "description": "来源标识。知识文档项为文档来源；检索事件为命中来源；可信上下文结果为上下文来源；费用上的 source 说明费用配置来源，不是供应商账单。 在所属结构适用时为必填项；固定值：\"configured-pricing\"。"
+                  },
+                  "amounts": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "按币种组织的金额对象，出现在运行费用、模型核算、调用费用、有效费用和探测费用中，不是单一合计数字。 在所属结构适用时为必填项。"
+                  }
+                },
+                "required": [
+                  "source",
+                  "amounts"
+                ],
+                "description": "运行、模型核算、模型调用、探测检查上的费用对象，或评测用例结果中的费用数值。对象或数值均可为 null，表示费用未知，不是 0。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              },
+              "agentCalls": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 64,
+                "description": "Agent 事件或预算用量中已发生的 Agent 调用次数，是计次结果，不表示允许的上限。 最小值0；最大值64。"
+              },
+              "scopeUsage": {
+                "$ref": "#/$defs/AgentBudgetUsage",
+                "description": "Agent 事件中按作用域汇总的预算用量，引用 AgentBudgetUsage，记录该范围已计入的步骤、工具或费用消耗。 具体结构见引用#/$defs/AgentBudgetUsage。"
+              },
+              "modelInvocationIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "maxItems": 256,
+                "description": "预算用量或相关事件所关联的模型调用标识列表。 最多项数256。"
+              },
+              "citationIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "maxItems": 256,
+                "description": "Agent 事件或预算用量中引用到的引用标识列表。 最多项数256。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "budgetUnits",
+              "steps",
+              "toolCalls",
+              "providerUsage",
+              "cost"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "error",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"error\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "错误、Agent 事件、发布错误、兼容性错误或警告中的错误码。远端模型错误取 MODEL_UNAVAILABLE、MODEL_TIMED_OUT、MODEL_RATE_LIMITED、MODEL_AUTH_FAILED、MODEL_REQUEST_REJECTED、MODEL_FEATURE_UNSUPPORTED、MODEL_PROTOCOL_ERROR。 在所属结构适用时为必填项。"
+              },
+              "message": {
+                "type": "string",
+                "description": "聊天请求中的消息对象，或错误、事件、发布计划与兼容性报告中的说明文字，语义随所在对象而定。 在所属结构适用时为必填项。"
+              },
+              "retryable": {
+                "type": "boolean",
+                "description": "错误对象或 Agent 错误事件是否标记为可再尝试；只表达该错误的可再试属性，不表示平台会自动重试。 在所属结构适用时为必填项。"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "message.completed",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"message.completed\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项。"
+              },
+              "createdAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "真实Run持久化时间；旧事件可省略"
+              },
+              "finishedAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "真实Run持久化时间；旧事件可省略"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "model.started",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"model.started\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "invocationId": {
+                "type": "string",
+                "description": "模型调用标识。用于模型开始和完成事件、模型调用记录以及远程模型请求，指向同一次模型调用。 在所属结构适用时为必填项。"
+              },
+              "stepId": {
+                "type": "string",
+                "description": "模型选择或模型调用事件、以及模型调用记录上的步骤标识，把该次模型活动归到 Agent 循环中的某一步。 在所属结构适用时为必填项。"
+              },
+              "attempt": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8,
+                "description": "Agent 事件、模型调用、入库作业或向量构建作业上的尝试序号，标识当前是第几次尝试。 在所属结构适用时为必填项；最小值1；最大值8。"
+              },
+              "binding": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                    "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "additionalProperties": false,
+                "description": "模型档案、调用、健康或兼容性检查中的绑定引用，或模型尝试事件中的绑定对象，标明实际使用的模型绑定。 在所属结构适用时为必填项。"
+              },
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                    "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "description": "模型或 Provider 的作用域标识。出现在绑定定义、模型事件、兼容性检查和模型调用上，用来区分模型或供应商所属范围，不是租户身份。 在所属结构适用时为必填项。"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "scope"
+                ],
+                "additionalProperties": false,
+                "description": "绑定中的模型引用，或事件、兼容性检查、调用记录与健康状态中的模型对象。 在所属结构适用时为必填项。"
+              },
+              "selectionReason": {
+                "type": "string",
+                "description": "工具、知识或模型被选中的原因。工具选择可为 MODEL_REQUEST、EAGER、RULE_ALWAYS、TRUSTED_CONTEXT、QUERY_MATCH、TAG_MATCH、DESCRIPTION_TAG_MATCH；模型侧为字符串原因。TRUSTED_CONTEXT 只说明依据可信上下文，不是身份证明。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "invocationId",
+              "stepId",
+              "attempt",
+              "binding",
+              "model",
+              "selectionReason"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "model.completed",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"model.completed\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "invocationId": {
+                "type": "string",
+                "description": "模型调用标识。用于模型开始和完成事件、模型调用记录以及远程模型请求，指向同一次模型调用。 在所属结构适用时为必填项。"
+              },
+              "stepId": {
+                "type": "string",
+                "description": "模型选择或模型调用事件、以及模型调用记录上的步骤标识，把该次模型活动归到 Agent 循环中的某一步。 在所属结构适用时为必填项。"
+              },
+              "attempt": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8,
+                "description": "Agent 事件、模型调用、入库作业或向量构建作业上的尝试序号，标识当前是第几次尝试。 在所属结构适用时为必填项；最小值1；最大值8。"
+              },
+              "binding": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                    "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "additionalProperties": false,
+                "description": "模型档案、调用、健康或兼容性检查中的绑定引用，或模型尝试事件中的绑定对象，标明实际使用的模型绑定。 在所属结构适用时为必填项。"
+              },
+              "model": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{0,63}$",
+                    "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项。"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                    "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项。"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "description": "模型或 Provider 的作用域标识。出现在绑定定义、模型事件、兼容性检查和模型调用上，用来区分模型或供应商所属范围，不是租户身份。 在所属结构适用时为必填项。"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "scope"
+                ],
+                "additionalProperties": false,
+                "description": "绑定中的模型引用，或事件、兼容性检查、调用记录与健康状态中的模型对象。 在所属结构适用时为必填项。"
+              },
+              "selectionReason": {
+                "type": "string",
+                "description": "工具、知识或模型被选中的原因。工具选择可为 MODEL_REQUEST、EAGER、RULE_ALWAYS、TRUSTED_CONTEXT、QUERY_MATCH、TAG_MATCH、DESCRIPTION_TAG_MATCH；模型侧为字符串原因。TRUSTED_CONTEXT 只说明依据可信上下文，不是身份证明。 在所属结构适用时为必填项。"
+              },
+              "status": {
+                "enum": [
+                  "RESPONDED",
+                  "FAILED",
+                  "SKIPPED"
+                ],
+                "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项；允许值：\"RESPONDED\"、\"FAILED\"、\"SKIPPED\"。"
+              },
+              "errorCode": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "机器错误码。运行、事件、工具执行和模型调用没有错误码时可为 null，null 不是整数 0。 在所属结构适用时为必填项。"
+              },
+              "outputStarted": {
+                "type": "boolean",
+                "description": "该模型调用是否已经开始产生输出；开始输出不等于调用完成。 在所属结构适用时为必填项。"
+              },
+              "usage": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true,
+                "description": "用量对象。运行上为用量结构；预算类事件引用 AgentBudgetUsage；模型调用与探测引用 ModelProviderUsage。模型事件上可为 null，表示没有用量，不能当成全零。费用未知也不等于 0。 在所属结构适用时为必填项。"
+              },
+              "cost": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true,
+                "description": "运行、模型核算、模型调用、探测检查上的费用对象，或评测用例结果中的费用数值。对象或数值均可为 null，表示费用未知，不是 0。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "invocationId",
+              "stepId",
+              "attempt",
+              "binding",
+              "model",
+              "selectionReason",
+              "status",
+              "errorCode",
+              "outputStarted",
+              "usage",
+              "cost"
+            ],
+            "additionalProperties": true,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "knowledge.planned",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"knowledge.planned\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。 在所属结构适用时为必填项。"
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Agent 事件中一次知识检索的标识，用于把检索相关事件关联到同一次检索。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+              },
+              "mode": {
+                "enum": [
+                  "EAGER",
+                  "AUTO",
+                  "ON_DEMAND"
+                ],
+                "description": "入口策略取 APPLICATION、RESTRICTED、INTERNAL_ONLY；知识定义取 INLINE、REMOTE、MANAGED，表示接入范围或知识托管方式。 在所属结构适用时为必填项；允许值：\"EAGER\"、\"AUTO\"、\"ON_DEMAND\"。"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/KnowledgeSelectedSource"
+                },
+                "maxItems": 16,
+                "description": "Agent 事件中携带的来源数组，列出本次结果所依据的来源条目，用于说明出处而不是授予访问权。 在所属结构适用时为必填项；最多项数16。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "agentVersion",
+              "retrievalId",
+              "mode",
+              "sources"
+            ],
+            "additionalProperties": false,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "knowledge.fused",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"knowledge.fused\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "agentId": {
+                "type": "string",
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。 在所属结构适用时为必填项。"
+              },
+              "retrievalId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Agent 事件中一次知识检索的标识，用于把检索相关事件关联到同一次检索。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50,
+                "description": "整数次数。知识检索或融合事件中是条目数；观测操作中是该操作的发生次数，不是上限。 在所属结构适用时为必填项；最小值0；最大值50。"
+              },
+              "rerank": {
+                "enum": [
+                  "NONE",
+                  "LEXICAL"
+                ],
+                "description": "知识路由或对应 Agent 事件中的重排方式，枚举为 NONE 或 LEXICAL，表示不重排或按词法重排。 在所属结构适用时为必填项；允许值：\"NONE\"、\"LEXICAL\"。"
+              },
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "retrievals": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 64,
+                    "description": "Agent 事件用量中的检索次数整数，统计该用量范围内发生的检索次数。 在所属结构适用时为必填项；最小值0；最大值64。"
+                  },
+                  "contextChars": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65536,
+                    "description": "Agent 事件用量中的上下文字符数，统计进入上下文的字符规模。 在所属结构适用时为必填项；最小值0；最大值65536。"
+                  }
+                },
+                "required": [
+                  "retrievals",
+                  "contextChars"
+                ],
+                "additionalProperties": false,
+                "description": "用量对象。运行上为用量结构；预算类事件引用 AgentBudgetUsage；模型调用与探测引用 ModelProviderUsage。模型事件上可为 null，表示没有用量，不能当成全零。费用未知也不等于 0。 在所属结构适用时为必填项。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "parentAgentCallId",
+              "depth",
+              "agentId",
+              "agentVersion",
+              "retrievalId",
+              "count",
+              "rerank",
+              "usage"
+            ],
+            "additionalProperties": false,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "citation.verified",
+            "description": "智能体事件种类，取值保留协议原名，如 message.started、tool.completed、knowledge.fused、confirmation.required、error。它只区分事件类型，不表示该步已经成功结束。 固定值：\"citation.verified\"。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+              },
+              "agentId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+              },
+              "agentVersion": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+              },
+              "parentAgentCallId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0。"
+              },
+              "references": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "$ref": "#/$defs/CitationVerification"
+                },
+                "description": "Agent 事件数据中的引用列表，列出回答或结果所关联的出处引用。 在所属结构适用时为必填项；最多项数256。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "agentId",
+              "agentVersion",
+              "parentAgentCallId",
+              "depth",
+              "references"
+            ],
+            "additionalProperties": false,
+            "description": "Agent 事件的数据对象，承载该事件类型对应的具体载荷。"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "reference.cited",
+            "description": "正文引用清单事件。"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "本轮实际引用清单；不把未使用的查询和检索命中作为引用。",
+            "properties": {
+              "agentCallId": {
+                "type": "string",
+                "description": "产生本回答的智能体调用标识。"
+              },
+              "items": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "object",
+                  "description": "与真实查询或检索记录匹配、在本轮正文中实际使用的引用资料。链接可省略。",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^(ref_|cite_)[a-zA-Z0-9_-]{1,123}$",
+                      "description": "服务端生成的本轮资料引用标识。"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "SYSTEM_DATA",
+                        "KNOWLEDGE_DOCUMENT",
+                        "WEB_RESOURCE"
+                      ],
+                      "description": "系统数据、知识文档或网络资源。"
+                    },
+                    "title": {
+                      "type": "string",
+                      "maxLength": 512,
+                      "description": "可展示的资料标题。"
+                    },
+                    "citationId": {
+                      "type": "string",
+                      "pattern": "^cite_[a-zA-Z0-9_-]{1,123}$",
+                      "description": "可选知识片段引用，用于原引用预览接口。"
+                    },
+                    "uri": {
+                      "type": "string",
+                      "maxLength": 2048,
+                      "description": "可选 HTTP(S) 原文地址，不构成访问授权。"
+                    },
+                    "summary": {
+                      "type": "string",
+                      "maxLength": 1000,
+                      "description": "真实来源的简要说明；历史记录可能没有摘要。"
+                    },
+                    "capturedAt": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "来源快照时间，Unix 毫秒；未记录时省略。"
+                    },
+                    "previewAvailable": {
+                      "type": "boolean",
+                      "description": "是否提供预览入口；打开时仍须重新检查当前权限。"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "title"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "正文实际使用且服务端匹配成功的资料。"
+              }
+            },
+            "required": [
+              "agentCallId",
+              "items"
+            ],
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "AgentBudgetUsage": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32,
+          "description": "预算用量中已计入的步骤数，出现在预算事件和 AgentBudgetUsage。它是计数，不是步骤上限，合同未声明到达某值会自动停止。 在所属结构适用时为必填项；最小值0；最大值32。"
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64,
+          "description": "预算用量中已计入的工具调用次数，出现在预算事件和 AgentBudgetUsage。它是计数，合同未声明次数上限或自动重试。 在所属结构适用时为必填项；最小值0；最大值64。"
+        },
+        "agentCalls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64,
+          "description": "Agent 事件或预算用量中已发生的 Agent 调用次数，是计次结果，不表示允许的上限。 在所属结构适用时为必填项；最小值0；最大值64。"
+        },
+        "budgetUnits": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "description": "Agent 事件或预算用量中累计的预算单位数，是消耗计数，不表示预算上限。 在所属结构适用时为必填项；最小值0；最大值1000000。"
+        },
+        "modelInvocationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "maxItems": 256,
+          "description": "预算用量或相关事件所关联的模型调用标识列表。 在所属结构适用时为必填项；最多项数256。"
+        },
+        "citationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "maxItems": 256,
+          "description": "Agent 事件或预算用量中引用到的引用标识列表。 在所属结构适用时为必填项；最多项数256。"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "steps",
+        "toolCalls",
+        "agentCalls",
+        "budgetUnits",
+        "modelInvocationIds",
+        "citationIds"
+      ]
+    },
+    "AgentResult": {
+      "type": "object",
+      "properties": {
+        "agentCallId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "一次 Agent 调用的标识。事件、模型调用、配额预留分片和助手结果都用它把记录归到同一次调用。 在所属结构适用时为必填项；最少字符数1。"
+        },
+        "parentAgentCallId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "产生本次调用的父级Agent调用标识，用于重建委派关系；根调用没有父级，空值形式以当前结构为准。 在所属结构适用时为必填项。"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "智能体事件数据中的嵌套深度，用于标出当前智能体、工具或相关步骤处在第几层。 在所属结构适用时为必填项；最小值0；最大值8。"
+        },
+        "agentId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "默认 Agent、对话请求或 Agent 事件中的 Agent 标识。对话请求中可为 null，表示未指定。 在所属结构适用时为必填项；最少字符数1。"
+        },
+        "agentVersion": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "description": "对话请求或 Agent 事件所采用的 Agent 版本标识，用于区分同一 Agent 的不同版本。 在所属结构适用时为必填项。"
+        },
+        "status": {
+          "const": "SUCCEEDED",
+          "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项；固定值：\"SUCCEEDED\"。"
+        },
+        "text": {
+          "type": "string",
+          "description": "文本正文。可指知识文档原文、模型增量文本、Agent 结果文本，或托管文档内容与导入文本，语义随所在对象而定。 在所属结构适用时为必填项。"
+        },
+        "output": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "TEXT",
+                  "description": "类型标记。工具调用对象上固定为 function；文本、工具、用量、完成和错误帧各自用自己的类型常量。 在所属结构适用时为必填项；固定值：\"TEXT\"。"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "所在对象的取值。配额策略中是分桶键；助手输出中是字符串或对象；告警中是观测整数，变迁上可为 null。 在所属结构适用时为必填项。"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "JSON",
+                  "description": "类型标记。工具调用对象上固定为 function；文本、工具、用量、完成和错误帧各自用自己的类型常量。 在所属结构适用时为必填项；固定值：\"JSON\"。"
+                },
+                "value": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "所在对象的取值。配额策略中是分桶键；助手输出中是字符串或对象；告警中是观测整数，变迁上可为 null。 在所属结构适用时为必填项。"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "助手结果的输出载荷，具体结构由该次结果决定。 在所属结构适用时为必填项。"
+        },
+        "usage": {
+          "$ref": "#/$defs/AgentBudgetUsage",
+          "description": "用量对象。运行上为用量结构；预算类事件引用 AgentBudgetUsage；模型调用与探测引用 ModelProviderUsage。模型事件上可为 null，表示没有用量，不能当成全零。费用未知也不等于 0。 在所属结构适用时为必填项；具体结构见引用#/$defs/AgentBudgetUsage。"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agentCallId",
+        "parentAgentCallId",
+        "depth",
+        "agentId",
+        "agentVersion",
+        "status",
+        "text",
+        "output",
+        "usage"
+      ]
+    },
+    "KnowledgeSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "DOCUMENT",
+            "URL",
+            "INLINE"
+          ],
+          "description": "类型标记。工具调用对象上固定为 function；文本、工具、用量、完成和错误帧各自用自己的类型常量。 在所属结构适用时为必填项；允许值：\"DOCUMENT\"、\"URL\"、\"INLINE\"。"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项；最少字符数1；最多字符数128。"
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^https?://",
+          "description": "知识来源 KnowledgeSource 上的资源定位字符串，标明来源可回溯的位置。 最少字符数1；最多字符数2048。"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128,
+          "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 最少字符数0；最多字符数128。"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "知识来源所在的页码，用于定位文档内位置。 最小值1；最大值1000000。"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512,
+          "description": "知识来源的定位串，标明文档或来源的位置。 最少字符数0；最多字符数512。"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "URL",
+                "description": "类型标记。工具调用对象上固定为 function；文本、工具、用量、完成和错误帧各自用自己的类型常量。 在所属结构适用时为必填项；固定值：\"URL\"。"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "uri"
+            ]
+          }
+        }
+      ]
+    },
+    "KnowledgeSelectedSource": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项；最少字符数1；最多字符数64。"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "资源版本字符串。用于引用、默认助手、注册、注册表，以及工具或知识相关事件，标明所绑定的具体版本。 在所属结构适用时为必填项；最少字符数1；最多字符数64。"
+        },
+        "reason": {
+          "enum": [
+            "MODEL_REQUEST",
+            "EAGER",
+            "RULE_ALWAYS",
+            "TRUSTED_CONTEXT",
+            "QUERY_MATCH",
+            "TAG_MATCH",
+            "DESCRIPTION_TAG_MATCH"
+          ],
+          "description": "工具执行、文档访问、权限决定、发布或模型对账中的原因文本。发布时必须为非空文本，预检可为空；它说明原因，不替代决策结果。 在所属结构适用时为必填项；允许值：\"MODEL_REQUEST\"、\"EAGER\"、\"RULE_ALWAYS\"、\"TRUSTED_CONTEXT\"、\"QUERY_MATCH\"、\"TAG_MATCH\"、\"DESCRIPTION_TAG_MATCH\"。"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "CitationVerification": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "对象在当前协议作用域内的标识，用于引用、查找与关联记录；标识本身不赋予访问权限。 在所属结构适用时为必填项；最多字符数128。"
+        },
+        "status": {
+          "enum": [
+            "VERIFIED",
+            "UNVERIFIED"
+          ],
+          "description": "当前资源或操作所处的状态，用于判断后续可执行动作；允许值及终态含义由所属结构定义。 在所属结构适用时为必填项；允许值：\"VERIFIED\"、\"UNVERIFIED\"。"
+        }
+      },
+      "required": [
+        "id",
+        "status"
+      ],
+      "additionalProperties": false,
+      "description": "仅核验当前检索来源编号，不证明回答事实正确；空编号为 UNVERIFIED。"
+    }
+  }
+}

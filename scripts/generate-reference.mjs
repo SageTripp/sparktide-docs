@@ -1,98 +1,180 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
-const root = path.resolve('docs')
-const contract = JSON.parse(await readFile(path.join(root, 'public/downloads/openapi.json'), 'utf8'))
-const schemas = contract.components.schemas
-const updated = process.env.DOCS_UPDATED ?? '2026-10-23'
-if (!/^\d{4}-\d{2}-\d{2}$/.test(updated)) throw new Error('DOCS_UPDATED 必须为 YYYY-MM-DD')
-const esc = value => String(value ?? '').replaceAll('|', '\\|').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\n', ' ')
-const schemaName = value => value.$ref?.split('/').pop()
-function type(s) {
-  if (s.$ref) return `[${schemaName(s)}](./数据结构.md#schema-${schemaName(s).toLowerCase()})`
-  if (s.oneOf || s.anyOf) return (s.oneOf || s.anyOf).map(type).join(' / ')
-  if (s.type === 'array') return `数组：${type(s.items || {})}`
-  return esc(Array.isArray(s.type) ? s.type.join(' / ') : s.type || (s.enum ? '枚举' : s.const !== undefined ? typeof s.const : '对象'))
-}
-function constraints(s) {
-  const out = []
-  for (const key of ['default','const','enum','minimum','maximum','exclusiveMinimum','exclusiveMaximum','minLength','maxLength','minItems','maxItems','uniqueItems','pattern','format']) {
-    if (s[key] !== undefined) out.push(`${key}: ${esc(JSON.stringify(s[key]))}`)
+import { errorSection, explainStatus, operationAnchor, publicErrorMarkdown, unavailable } from './reference-errors.mjs'
+import { fieldNote } from './reference-fields.mjs'
+
+const catalog = JSON.parse(await readFile('docs/.vitepress/versions.json', 'utf8'))
+const version = process.argv[2] || catalog.current
+const release = catalog.versions.find(item => item.id === version)
+if (!release) throw new Error('未知文档版本：' + version)
+const root = path.resolve('docs', version, '参考资料/HTTP接口')
+await mkdir(root, { recursive: true })
+const download = `/版本/${version}`
+const readContract = name => readFile(path.resolve('docs/public', '版本', version, name), 'utf8').then(JSON.parse)
+const contract = await readContract('openapi.json')
+const business = await readContract('business-chat.openapi.json')
+const domainErrors = JSON.parse(await readFile(new URL('./reference-domain-errors.json', import.meta.url), 'utf8'))
+const domainStatuses = JSON.parse(await readFile(new URL('./reference-domain-statuses.json', import.meta.url), 'utf8'))
+if (JSON.stringify(Object.keys(domainErrors).sort()) !== JSON.stringify(Object.keys(domainStatuses).sort())) throw new Error('领域错误说明与状态清单不一致')
+const esc = value => String(value ?? '').replaceAll('|', '&#124;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\n', ' ')
+const meta = title => `---\ntitle: "${title}"\nproductVersion: "${version}"\nupdated: "${release.updated}"\nsource: "sparktide-platform/contracts；scripts/generate-reference.mjs；scripts/reference-errors.mjs；scripts/reference-fields.mjs"\n---\n\n# ${title}\n\n`
+const warning = '\n::: warning 合同与开放范围\n本页是本版本随附机器合同的字段参考，合同包含预留操作，不代表每个接口都已开放。调用前先查[当前能力与限制](../能力与限制.md)。失败时请结合本页错误表与[公共错误码](../公共错误码.md)处理。\n:::\n\n'
+const pointerName = ref => ref.split('/').pop().replaceAll('~1', '/').replaceAll('~0', '~')
+function type(schema, schemaPage = '数据结构') {
+  if (!schema) return '对象'
+  if (schema.const !== undefined && schema.type === undefined && !schema.$ref && !schema.oneOf && !schema.anyOf && !schema.allOf) return esc(typeof schema.const)
+  if (schema.$ref) {
+    const name = pointerName(schema.$ref)
+    const page = schema.$ref.includes('openapi.json#') ? '数据结构' : schemaPage
+    return `[${esc(name)}](./${page}.md#schema-${name.toLowerCase()})`
   }
-  if (s.additionalProperties === false) out.push('不允许额外字段')
-  if (s.description) out.push(esc(s.description))
-  return out.join('；') || '—'
+  if (schema.oneOf || schema.anyOf || schema.allOf) return (schema.oneOf || schema.anyOf || schema.allOf).map(item => type(item, schemaPage)).join(' / ')
+  if (schema.const !== undefined && schema.type === undefined) return schema.const === null ? 'null' : typeof schema.const
+  if (schema.type === 'array') return `数组：${type(schema.items || {}, schemaPage)}`
+  return esc(Array.isArray(schema.type) ? schema.type.join(' / ') : schema.type || '对象')
 }
-function table(s, prefix = '') {
-  const rows=[]
-  function visit(value, p) {
-    for(const [name,field] of Object.entries(value.properties || {})) {
-      const key=p+name
-      rows.push(`| ${esc(key)} | ${type(field)} | ${(value.required || []).includes(name)?'是':'否'} | ${constraints(field)} |`)
-      if(field.properties) visit(field,key+'.')
-      if(field.items?.properties) visit(field.items,key+'[].')
+function constraints(schema, description) {
+  const keys = ['default', 'const', 'enum', 'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'pattern', 'format', 'additionalProperties']
+  const text = description ?? schema.description
+  return [text, ...keys.filter(key => schema[key] !== undefined).map(key => `${key}: ${JSON.stringify(schema[key])}`)].filter(Boolean).map(esc).join('；') || '—'
+}
+function fieldDescription(schema, scope, name) {
+  const note = fieldNote(scope, name)
+  if (note) return note
+  const raw = String(schema.description || '')
+  if (raw.includes('结构化错误')) return '失败时携带的 Error 信封。合同原文仍在折叠的 JSON 里；具体 error.code 见公共错误码，不要把这个对象理解成所有 HTTP 状态共用同一个原因。'
+  return schema.description
+}
+function table(schema, schemaPage, scope, expand) {
+  if (schema.oneOf && !schema.properties) {
+    return schema.oneOf.map((branch, index) => {
+      const mode = branch.properties?.mode?.const
+      const label = mode ? `分支 ${mode}` : `分支 ${index + 1}`
+      return `\n**${label}**\n` + table(branch, schemaPage, scope, expand)
+    }).join('\n')
+  }
+  if (!schema.properties) return `\n${type(schema, schemaPage)}。${constraints(schema)}\n`
+  let text = '\n| 字段 | 类型 | 必填 | 说明与约束 |\n| --- | --- | --- | --- |\n'
+  text += Object.entries(schema.properties).map(([name, field]) => `| ${esc(name)} | ${type(field, schemaPage)} | ${(schema.required || []).includes(name) ? '是' : '否'} | ${constraints(field, fieldDescription(field, scope, name))} |`).join('\n')
+  text += '\n'
+  if (expand) {
+    for (const [name, field] of Object.entries(schema.properties)) {
+      if (!field.properties) continue
+      text += `\n**${name}**\n` + table(field, schemaPage, scope ? `${scope}.${name}` : name, false)
     }
   }
-  visit(s,prefix)
-  return rows.length ? '\n| 字段 | 类型 | 本层必填 | 默认值与约束 |\n| --- | --- | --- | --- |\n'+rows.join('\n')+'\n' : '\n类型：'+type(s)+'。'+constraints(s)+'\n'
+  return text
 }
-const meta=title=>`---\ntitle: ${title}\nproductVersion: "HTTP 1.0 当前契约，不代表新公开发行"\nupdated: "${updated}"\nstatus: 已确认\nowner: SparkTide 维护者\nsource: protocol/openapi.json 与 Api/AuditApi/ObservationApi\n---\n\n# ${title}\n\n`
-function parameter(value) {
- if (!value.$ref) return value
- const prefix='#/components/parameters/'
- if (!value.$ref.startsWith(prefix)) throw new Error('不支持的参数引用：'+value.$ref)
- const name=value.$ref.slice(prefix.length).replaceAll('~1','/').replaceAll('~0','~')
- const resolved=contract.components.parameters?.[name]
- if (!resolved || resolved.$ref) throw new Error('参数引用不存在或循环：'+value.$ref)
- return resolved
+function resolve(value, document) {
+  if (!value?.$ref) return value
+  if (!value.$ref.startsWith('#/')) throw new Error('不支持的外部引用：' + value.$ref)
+  return value.$ref.slice(2).split('/').reduce((item, key) => item[key.replaceAll('~1', '/').replaceAll('~0', '~')], document)
 }
-const groups={
- '身份与应用':{intro:'平台管理员创建应用、签发与撤销本地凭据；有效身份读取 /me，自身应用身份读取应用。默认入口由应用管理身份设置，并携带当前应用 revision。',operations:[]},
- '能力注册':{intro:'应用能力操作需要 APP_ADMIN 或 PLATFORM_ADMIN；公共模型与全局绑定需要平台管理员。注册正文是 id/version/definition，更新正文直接是 definition。单资源发布需先发布依赖；批次发布可在一个事务内发布整条依赖链。',operations:[]},
- '聊天与任务':{intro:'使用 USER 或 APP_ADMIN 业务身份。所有 Run、事件、确认与会话按应用、用户和租户所有权校验。POST chat 显式使用 Accept，JSON 返回 202，SSE 返回 200 流。',operations:[]},
- '运维接口':{intro:'指标、审计、应用活动、托管文档和应用租约需要管理身份。归档与全局供应商租约只允许平台管理员；机器契约下载需要有效身份。',operations:[]}
+function schemaOf(bodySchema, document) {
+  if (!bodySchema) return { schema: {}, name: undefined }
+  if (bodySchema.$ref?.startsWith('#/')) return { schema: resolve(bodySchema, document), name: pointerName(bodySchema.$ref) }
+  if (bodySchema.$ref?.includes('/components/schemas/')) return { schema: contract.components.schemas[pointerName(bodySchema.$ref)] || bodySchema, name: pointerName(bodySchema.$ref) }
+  return { schema: bodySchema, name: undefined }
+}
+function operation(route, method, op, methods, document, schemaPage, business) {
+  const title = String(op.summary || `${method.toUpperCase()} ${route}`).trim()
+  const anchor = operationAnchor(method, route)
+  let text = `\n## ${title} {#${anchor}}\n\n\`${method.toUpperCase()} ${route}\`\n\n${esc(String(op.description || '').replaceAll('结构化错误', ' Error 信封'))}\n`
+  if (!business && unavailable(route)) text += '\n::: warning 当前未开放\n当前 Node 平台尚未提供此操作。不要把合同字段或 SDK 方法的存在视为调用可用。\n:::\n'
+  const parameters = [...(methods.parameters || []), ...(op.parameters || [])].map(item => resolve(item, document))
+  if (parameters.length) text += '\n### 请求参数\n\n| 名称 | 位置 | 必填 | 类型与说明 |\n| --- | --- | --- | --- |\n' + parameters.map(p => `| ${esc(p.name)} | ${p.in} | ${p.required ? '是' : '否'} | ${type(p.schema || {}, schemaPage)}；${constraints(p.schema || {}, fieldNote(`${method.toUpperCase()} ${route}`, p.name) || p.description || p.schema?.description)} |`).join('\n') + '\n'
+  let jsonBody = false
+  let multipart = false
+  if (op.requestBody) {
+    const body = resolve(op.requestBody, document)
+    text += '\n### 请求正文\n'
+    for (const [mime, content] of Object.entries(body.content || {})) {
+      if (mime.includes('json')) jsonBody = true
+      if (mime.includes('multipart')) multipart = true
+      const resolved = schemaOf(content.schema || {}, document)
+      const scope = resolved.name || `${method.toUpperCase()} ${route}`
+      text += `\nContent-Type：\`${mime}\`。正文${body.required === false ? '可选' : '必填'}。\n` + table(resolved.schema || {}, schemaPage, scope, true)
+    }
+  }
+  text += '\n### 响应\n\n| HTTP | 说明 | 类型 |\n| --- | --- | --- |\n'
+  for (const [status, raw] of Object.entries(op.responses || {})) {
+    const response = resolve(raw, document)
+    const meaning = Number(status) >= 400 || status === 'default' ? explainStatus(status, response.description) : (response.description || '')
+    const content = Object.entries(response.content || {})
+    text += content.length ? content.map(([mime, entry]) => `| ${status} | ${esc(meaning)} | ${mime}：${type(entry.schema || {}, schemaPage)} |`).join('\n') + '\n' : `| ${status} | ${esc(meaning)} | 无正文 |\n`
+  }
+  text += errorSection({ method, route, business, jsonBody, multipart })
+  return text
 }
 function group(route) {
- if(/\/(chat|runs|conversations)(\/|$)/.test(route)&&!route.includes('/activity/'))return '聊天与任务'
- if(route.includes('/model-compatibility'))return '能力注册'
- if(route.includes('/release-plans')||route.includes('/releases'))return '能力注册'
- if(route.includes('{kind}')||route.includes('/model-providers')||route.includes('/models'))return '能力注册'
- if(route==='/v1/me'||route==='/v1/apps'||route==='/v1/apps/{app}'||route.includes('/tokens')||route.includes('/default-agent')||route.includes('/agent-entries/'))return '身份与应用'
- return '运维接口'
+  if (/\/(chat|runs|conversations|streaming)(\/|$)/.test(route) && !route.includes('/activity/')) return '聊天与任务'
+  if (/\/(agents|tools|knowledge|ui-capabilities|model-providers|models|model-bindings|model-profiles|release-plans|releases|model-compatibility|\{kind\})(\/|$)/.test(route)) return '能力与知识'
+  if (route === '/v1/me' || route === '/v1/me/profile' || /^\/v1\/apps(?:\/\{app\})?$/.test(route) || /\/(tokens|default-agent|agent-entries|credentials|identity-delegations?)(\/|$)/.test(route)) return '身份与应用'
+  return '治理与运维'
 }
-let count=0
-for(const [route,methods]of Object.entries(contract.paths))for(const[method,op]of Object.entries(methods)){
- if(!['get','post','put','delete','patch'].includes(method))continue
- count++
- let text=`\n## ${method.toUpperCase()} ${route}\n\n`
- const parameters=[...(methods.parameters || []),...(op.parameters || [])].map(parameter)
- if(parameters.length){text+='### 参数\n\n| 名称 | 位置 | 必填 | 类型与约束 |\n| --- | --- | --- | --- |\n';for(const p of parameters)text+=`| ${esc(p.name)} | ${p.in} | ${p.required?'是':'否'} | ${type(p.schema||{})}；${constraints(p.schema||{})}${p.description?'；'+esc(p.description):''} |\n`}
- if(op.requestBody){text+='\n### 请求正文\n';for(const[mime,body]of Object.entries(op.requestBody.content||{})){text+=`\nContent-Type：\`${mime}\`；正文${op.requestBody.required?'必填':'可选'}。\n`+table(body.schema||{})}}
- text+='\n### 响应\n\n| HTTP | 响应类型 | 数据结构 |\n| --- | --- | --- |\n'
- for(const[status,response]of Object.entries(op.responses||{})){
-  const content=Object.entries(response.content||{})
-  if(!content.length)text+=`| ${status} | 无正文 | ${esc(response.description)} |\n`
-  for(const[mime,body]of content)text+=`| ${status==='default'?'其他错误':status} | ${mime} | ${type(body.schema||{})} |\n`
- }
- if(route.includes('/documents')&&!route.endsWith('/access'))text+='\n文档写入只允许 MANAGED 草稿；id/text 必填，text 上限 65536 字符，每版本最多 1000 篇。GET 返回元数据，已发布文档不可修改或删除。\n'
- if(route.endsWith('/activity/runs'))text+='\n返回 `{items:Run[],nextOffset:number|null}`，按创建时间倒序，nextOffset 为 null 表示结束。\n'
- if(route.endsWith('/metrics'))text+='\n返回 runCount、byStatus、configuredCost（币种→十进制金额字符串）、unknownCostRuns。费用为配置统计，不是供应商账单。\n'
- if(route.endsWith('/leases'))text+='\nkind/id/version/instanceId 为必填字符串；ttlSeconds 为 10–300。能力定义必须启用 leaseRequired，且知识必须为 REMOTE；全局路径仅支持 model-providers。返回 instanceId/expiresAt。\n'
- if(route.endsWith('/maintenance/archive'))text+='\n默认只预览。dryRun=false 才修改热数据，返回本批处理结果；不会默认永久删除归档。\n'
- if(/^\/v1\/apps\/\{app\}\/conversations(\/|$)/.test(route))text+='\n会话属于发起主体；同一会话同时只有一个活动 Run。失败、超时与取消的用户消息保留在会话中并携带 status 与 errorCode，但不进入后续模型历史。删除仅移除会话正文，Run、事件、审计与幂等证据保留；带已删除会话号的 chat 返回 404。\n'
- groups[group(route)].operations.push(text)
+let count = 0
+const groups = new Map()
+for (const [route, methods] of Object.entries(contract.paths)) for (const [method, op] of Object.entries(methods)) {
+  if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue
+  const name = group(route)
+  groups.set(name, (groups.get(name) || '') + operation(route, method, op, methods, contract, '数据结构', false))
+  count++
 }
-for(const[name,g]of Object.entries(groups)){
- let text=meta(name)+g.intro+'\n\n字段类型见[数据结构](./数据结构.md)，通用身份和请求头见[API 入口](./README.md)。\n'
- if(name==='能力注册')text+='\n支持的 kind：agents、tools、knowledge、ui-capabilities、model-providers、models、model-bindings、model-profiles。版本为三段稳定语义版本。更新草稿和替换默认入口要求带双引号的 If-Match。已发布定义不可变；撤销后不能再次发布。公共模型草稿使用 POST 与 If-Match 更新，没有单独 PUT 路由。\n'
- if(name==='聊天与任务')text+='\n同次创建请求保留 Idempotency-Key，同键同正文复用 Run，同键不同正文冲突。会话只能有一个活动任务。confirm 正文只提交确认标识与决策，不能替换参数。取消不撤销已经到达业务系统的副作用。\n'
- await writeFile(path.join(root,'接口参考',name+'.md'),text+g.operations.join(''))
+const written = []
+for (const [name, content] of groups) {
+  const file = path.join(root, name + '.md')
+  await writeFile(file, meta(name) + warning + '[HTTP 接口总览](README.md) · [数据结构](数据结构.md) · [公共错误码](../公共错误码.md)\n' + content)
+  written.push(file)
 }
-const notes={AgentDefinition:'允许列表默认空；delegatedCapabilities 采用 kind/id@version。根 Agent 与子 Agent 共用根任务预算。',ToolDefinition:'roles 必须为非空 USER/APP_ADMIN 数组；effect 为 READ、COMPUTE、WRITE、DANGEROUS。后者要求用户确认。',KnowledgeDefinition:'INLINE 要求 1–100 篇 documents，每篇 text 1–16384 字符；REMOTE 必须有 endpoint；MANAGED 通过独立文档接口导入。',ProviderDefinition:'stream=true 可用于 OPENAI_CHAT 与 REMOTE 1.0；REMOTE 事件、身份及终结要求见 RemoteModelRequest/RemoteModelStreamFrame。endpoint 为完整请求地址，受出站白名单和密钥 origin 绑定限制。',BindingDefinition:'scope 省略表示当前应用，也可明确填写当前 appId；global 绑定仅平台管理员授权。',ChatRequest:'agentId 非空时必须同时提供 agentVersion；appId 若提供须等于路径。conversationId 省略/null 创建会话；context 与 client 不是可信身份。',CreateToken:'subjectId 非空；tenantId 默认为空字符串。原始 token 仅签发时返回。',Run:'202 返回的 Run 尚未完成；终态为 SUCCEEDED、FAILED、CANCELLED、TIMED_OUT。',Definition:'根据 Registry kind 选择对应定义；不把不同类别的字段混合提交。'}
-let definitions=meta('数据结构与字段')+'本页根据随站点发布的 OpenAPI 生成。可选不表示允许 null；只有类型明确包含 null 时才能传 null。嵌套必填列指该字段所在对象，父对象可选时只在提供父对象后校验。\n\n'
-definitions+='## 工具与 UI 的 Schema 方言\n\nSchema 支持 type、properties、required、additionalProperties:false、items、enum、minimum/maximum、minLength/maxLength、minItems/maxItems、description/title。对象关闭额外字段，最大递归 12 层；默认字符串上限 65536、数组上限 1000。不支持 $ref、pattern、format、oneOf 或远端解析。这里指工具输入输出和 UI Props 的业务 Schema，不是 OpenAPI 文件自身的 Schema 特性。\n\n'
-for(const[name,s]of Object.entries(schemas)){
- definitions+=`## ${name} {#schema-${name.toLowerCase()}}\n\n${notes[name]||''}\n`+table(s)
- definitions+='\n::: details 完整机器定义\n\n```json\n'+JSON.stringify(s,null,2)+'\n```\n\n:::\n\n'
+let businessCount = 0
+let businessText = meta('业务聊天接口') + warning + '这是业务后台 SDK 暴露的聊天网关合同。使用业务登录身份；路径基于业务后台配置的 HTTP 前缀，不把平台管理凭据交给浏览器。\n\n[业务数据结构](业务数据结构.md) · [公共错误码](../公共错误码.md) · [开发接入](../../开发接入/HTTP接入.md)\n'
+for (const [route, methods] of Object.entries(business.paths)) for (const [method, op] of Object.entries(methods)) {
+  if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue
+  businessText += operation(route, method, op, methods, business, '业务数据结构', true)
+  businessCount++
 }
-await writeFile(path.join(root,'接口参考/数据结构.md'),definitions.trimEnd()+'\n')
-console.log(`生成 ${count} 个操作、${Object.keys(schemas).length} 个数据结构参考`)
+const businessFile = path.join(root, '业务聊天接口.md')
+await writeFile(businessFile, businessText)
+written.push(businessFile)
+for (const [name, document] of [['数据结构', contract], ['业务数据结构', business]]) {
+  let text = meta(name) + '由本版本机器合同生成。请求和响应字段若在文档映射里有单独的角色说明，表格采用该说明；折叠的 JSON 仍是合同原文。可选不等于允许 null；只有合同明确包含 null 时才能传入。\n\n[HTTP 接口总览](README.md) · [公共错误码](../公共错误码.md)\n'
+  for (const [key, schema] of Object.entries(document.components?.schemas || {})) {
+    const resolved = schema.$ref ? (schemaOf(schema, document).schema || schema) : schema
+    const rawDescription = schema.description || resolved.description || ''
+    const shown = String(rawDescription).includes('结构化错误') ? '失败响应使用的 Error 信封。表格说明的是各字段在该信封中的角色；折叠 JSON 保留合同原文。' : rawDescription
+    text += `\n## ${key} {#schema-${key.toLowerCase()}}\n\n${esc(shown)}\n` + table(resolved.properties ? resolved : schema, name, key, false) + '\n::: details 完整定义\n\n```json\n' + JSON.stringify(schema, null, 2) + '\n```\n\n:::\n'
+  }
+  const file = path.join(root, name + '.md')
+  await writeFile(file, text)
+  written.push(file)
+}
+const readme = path.join(root, 'README.md')
+await writeFile(readme, meta('HTTP 接口') + warning + `平台协议版本为 \`${contract.info.version}\`，文档对应平台版本为 \`${version}\`，两者用途不同。机器下载与生成页一起保存在本版本命名空间。\n\n## 按任务查询\n\n` + [...groups.keys(), '业务聊天接口', '数据结构', '业务数据结构'].map(name => `- [${name}](${name}.md)`).join('\n') + `\n\n## 错误码\n\n操作页说明各 HTTP 状态和入口错误。认证、限流、容量、运行与领域错误码见[公共错误码](../公共错误码.md)。\n\n## 下载机器合同\n\n` + ['openapi.json', 'business-chat.openapi.json', 'agent-event.schema.json', 'knowledge-callback.schema.json', 'remote-model.schema.json'].map(name => `- [${name}](${download}/${name})`).join('\n') + '\n\n## 调用前确认\n\n1. 浏览器调用业务后台聊天网关；管理与平台客户端按平台合同调用。\n2. 身份来自受信认证边界，不能用 appId 或普通 context 代替授权。\n3. 创建请求保留同一业务意图的幂等键；未知结果先读取原记录，不自动重发写操作。\n4. HTTP 成功不等于任务成功；按事件或任务终态判断执行结果。\n')
+written.push(readme)
+if (version === '0.2.0') {
+  const errorPage = path.resolve('docs', version, '参考资料/公共错误码.md')
+  await writeFile(errorPage, meta('公共错误码') + publicErrorMarkdown() + domainErrorMarkdown())
+  written.push(errorPage)
+}
+const placeholder = /结构化错误|请求被拒绝；检查认证、权限、输入及受控错误码/
+for (const file of written) {
+  if (file.endsWith('数据结构.md') || file.endsWith('业务数据结构.md')) continue
+  const text = await readFile(file, 'utf8')
+  if (placeholder.test(text)) throw new Error('仍有泛化错误占位：' + file)
+  const headings = [...text.matchAll(/^## (.+)$/gm)].map(item => item[1])
+  if (headings.some(item => /^(GET|POST|PUT|PATCH|DELETE) /.test(item))) throw new Error('操作标题仍是方法路径：' + file)
+}
+console.log(`已生成 ${version}：${count} 个平台操作、${businessCount} 个业务网关操作、${Object.keys(contract.components.schemas).length} 个平台数据结构`)
+
+function domainErrorMarkdown() {
+  let text = '\n## 领域错误码索引 {#领域错误码索引}\n\n以下按领域解释 0.2.0 实现中的错误码。状态列是错误对象定义的状态，**不代表所有错误都直接成为 HTTP 响应**：运行、摄取、向量构建中的失败也可能记录在任务或事件里。未开放入口不能因为存在错误码而调用。未知结果与写入副作用必须先核对原记录，不能只按状态码自动重试。\n'
+  const categories = [...new Set(Object.values(domainErrors).map(item => item.category))]
+  for (const category of categories) {
+    text += `\n### ${esc(category)}\n\n| error.code | 状态 | 含义与触发条件 | 处理方式 |\n| --- | --- | --- | --- |\n`
+    for (const [code, item] of Object.entries(domainErrors).sort(([a], [b]) => a.localeCompare(b))) {
+      if (item.category !== category) continue
+      text += `| \`${code}\` | ${domainStatuses[code].join(' / ')} | ${esc(item.meaning)} | ${esc(item.handling)} |\n`
+    }
+  }
+  return text
+}
